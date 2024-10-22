@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Button } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -22,32 +22,47 @@ import ShopScreen from "../screens/ShopScreen";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Product Info Screen Wrapper for dynamic title
+// Standalone Product Info Screen Wrapper
 function ProductInfoScreenWrapper({ route, navigation }) {
-  const { itemName } = route.params;
+  const { title, item } = route.params || {};
+  const itemName = title || item?.name || "Product Info";
 
   useEffect(() => {
-    navigation.setOptions({ title: itemName });
+    navigation.setOptions({
+      title: itemName,
+      headerLeft: () => (
+        <Button
+          onPress={() => navigation.goBack()}
+          title="Back"
+          color="#ff6347"
+        />
+      ),
+    });
   }, [navigation, itemName]);
 
   return <ProductInfoScreen />;
 }
 
-// Shop Stack Navigator (includes ProductInfoScreen)
+// Shop Stack Navigator
 function ShopStackNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          height: 60,
+          backgroundColor: "#fff",
+        },
+        headerTitleStyle: {
+          fontSize: 22,
+          fontWeight: "bold",
+        },
+        headerTitleAlign: "center",
+      }}
+    >
       <Stack.Screen
         name="ShopMain"
         component={ShopScreen}
         options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="ProductInfo"
-        component={ProductInfoScreenWrapper}
-        options={({ route }) => ({
-          title: route.params.itemName,
-        })}
       />
     </Stack.Navigator>
   );
@@ -56,7 +71,19 @@ function ShopStackNavigator() {
 // Home Stack Navigator
 function HomeStackNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          height: 60,
+          backgroundColor: "#fff",
+        },
+        headerTitleStyle: {
+          fontSize: 20,
+          fontWeight: "bold",
+        },
+        headerTitleAlign: "center",
+      }}
+    >
       <Stack.Screen
         name="Home"
         component={HomeScreen}
@@ -145,9 +172,19 @@ export default function StackNavigator() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="ProductInfo"
+          component={ProductInfoScreenWrapper}
+          options={{ headerShown: true }} // Ensure header is shown
+        />
+        <Stack.Screen
           name="Address"
           component={AddressScreen}
-          options={{ headerShown: false }}
+          options={{
+            headerStyle: {
+              height: 60,
+              backgroundColor: "#f8f8f8",
+            },
+          }}
         />
         <Stack.Screen
           name="Confirm"

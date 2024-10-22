@@ -113,17 +113,14 @@ const HomeScreen = () => {
               key={item.id}
               item={item}
               onPress={() =>
-                navigation.navigate("ShopStack", {
-                  screen: "ProductInfo",
-                  params: {
-                    id: item.id,
-                    title: item.name,
-                    price: item.variants[0].price,
-                    carouselImages: item.images,
-                    color: item.color,
-                    size: item.variants[0].size,
-                    item,
-                  },
+                navigation.navigate("ProductInfo", {
+                  id: item.id,
+                  title: item.name,
+                  price: item.variants[0].price,
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item,
                 })
               }
             />
@@ -136,22 +133,19 @@ const HomeScreen = () => {
               key={`${item.id}-${index}`}
               style={styles.productItem}
               onPress={() => {
-                navigation.navigate("ShopStack", {
-                  screen: "ProductInfo",
-                  params: {
-                    id: item.id,
-                    title: item.name,
-                    priceRange: {
-                      min: item.variants[0].price,
-                      max: item.variants[item.variants.length - 1].price,
-                    },
-                    carouselImages: item.images,
-                    color: item.color,
-                    size: item.variants[0].size,
-                    item,
+                navigation.navigate("ProductInfo", {
+                  id: item.id,
+                  title: item.name,
+                  priceRange: {
+                    min: item.variants[0].price,
+                    max: item.variants[item.variants.length - 1].price,
                   },
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item,
                 });
-                setTimeout(scrollToTop, 100);
+                setTimeout(scrollToTop, 100); // Keep this if you need to scroll to the top
               }}
             >
               <Image
@@ -193,25 +187,24 @@ const HomeScreen = () => {
               key={item.id}
               item={item}
               onPress={() =>
-                navigation.navigate("ShopStack", {
-                  screen: "ProductInfo", // Navigate within ShopStack to ProductInfo screen
-                  params: {
-                    id: item.id,
-                    title: item.name,
-                    priceRange: {
-                      min: item.variants[0].price,
-                      max: item.variants[item.variants.length - 1].price,
-                    },
-                    carouselImages: item.images,
-                    color: item.color,
-                    size: item.variants[0].size,
-                    item,
+                navigation.navigate("ProductInfo", {
+                  // Navigate directly to ProductInfo
+                  id: item.id,
+                  title: item.name,
+                  priceRange: {
+                    min: item.variants[0].price,
+                    max: item.variants[item.variants.length - 1].price,
                   },
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item,
                 })
               }
             />
           ))}
         </View>
+
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={() => navigation.navigate("ShopStack")}

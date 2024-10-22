@@ -162,7 +162,8 @@ const ProductInfoScreen = () => {
               key={`${item.id}-${index}`}
               style={styles.productItem}
               onPress={() => {
-                navigation.navigate("Info", {
+                // Navigate directly to ProductInfo
+                navigation.navigate("ProductInfo", {
                   id: item.id,
                   title: item.name,
                   priceRange: {
@@ -174,7 +175,7 @@ const ProductInfoScreen = () => {
                   size: item.variants[0].size,
                   item,
                 });
-                setTimeout(scrollToTop, 100);
+                setTimeout(scrollToTop, 100); // Optional: Scroll to the top
               }}
             >
               <Image

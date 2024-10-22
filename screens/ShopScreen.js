@@ -144,8 +144,8 @@ const ShopScreen = ({ route }) => {
             {selectedThreePiece === null
               ? "Number of pieces"
               : selectedThreePiece === "yes"
-                ? "Yes"
-                : "No"}
+              ? "Yes"
+              : "No"}
           </Text>
         </ModalSelector>
 
@@ -159,20 +159,18 @@ const ShopScreen = ({ route }) => {
               key={item.id}
               item={item}
               onPress={() =>
-                navigation.navigate("ShopStack", {
-                  screen: "ProductInfo", // Navigate within ShopStack to ProductInfo screen
-                  params: {
-                    id: item.id,
-                    title: item.name,
-                    priceRange: {
-                      min: item.variants[0].price,
-                      max: item.variants[item.variants.length - 1].price,
-                    },
-                    carouselImages: item.images,
-                    color: item.color,
-                    size: item.variants[0].size,
-                    item,
+                navigation.navigate("ProductInfo", {
+                  // Directly navigate to ProductInfo
+                  id: item.id,
+                  title: item.name,
+                  priceRange: {
+                    min: item.variants[0].price,
+                    max: item.variants[item.variants.length - 1].price,
                   },
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item,
                 })
               }
             />
