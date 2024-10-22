@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Button } from "react-native";
+import { View, Text, StyleSheet, Button, TouchableOpacity } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -26,17 +26,18 @@ const Tab = createBottomTabNavigator();
 function ProductInfoScreenWrapper({ route, navigation }) {
   const { title, item } = route.params || {};
   const itemName = title || item?.name || "Product Info";
-
   useEffect(() => {
     navigation.setOptions({
-      title: itemName,
+      headerTitle: () => <View style={styles.titleContainer}></View>,
       headerLeft: () => (
-        <Button
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
-          title="Back"
-          color="#ff6347"
-        />
+          style={styles.backButton}
+        >
+          <Text style={styles.title}>{itemName}</Text>
+        </TouchableOpacity>
       ),
+      headerTitleAlign: "center", // Center the title
     });
   }, [navigation, itemName]);
 
@@ -208,5 +209,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
+  },
+  titleContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  backButton: {
+    backgroundColor: "transparent",
+    padding: 10,
+  },
+  backButtonText: {
+    color: "#ff6347",
+    fontSize: 16,
   },
 });

@@ -1,3 +1,4 @@
+// AppLayout.js
 import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -8,21 +9,19 @@ const AppLayout = ({ children }) => {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
         {/* Global StatusBar Configuration */}
-        <StatusBar
-          style="dark" // Adjust based on your theme
-          translucent
-          backgroundColor="transparent" // For proper translucent effect
-        />
-        {children} {/* Directly rendering children */}
+        <StatusBar style="dark" translucent backgroundColor="transparent" />
+        {/* Render children passed to this component */}
+        {children}
       </SafeAreaView>
     </SafeAreaProvider>
   );
 };
 
+// Styles for the AppLayout component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff", // Ensures the background is white
   },
 });
 

@@ -89,115 +89,108 @@ const ShopScreen = ({ route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image
-            style={styles.logo}
-            source={require("../assets/13.jpg")}
-            resizeMode="cover"
-          ></Image>
-        </View>
-        {/* Search Bar */}
-        <View style={styles.searchBar}>
-          <Pressable style={styles.searchInput}>
-            <AntDesign name="search1" size={22} color="black" />
-            <TextInput placeholder="Search Products" style={{ flex: 1 }} />
-          </Pressable>
-        </View>
+    <ScrollView style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image
+          style={styles.logo}
+          source={require("../assets/13.jpg")}
+          resizeMode="cover"
+        ></Image>
+      </View>
+      {/* Search Bar */}
+      <View style={styles.searchBar}>
+        <Pressable style={styles.searchInput}>
+          <AntDesign name="search1" size={22} color="black" />
+          <TextInput placeholder="Search Products" style={{ flex: 1 }} />
+        </Pressable>
+      </View>
 
-        <ModalSelector
-          data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
-          initValue="Select Theme"
-          onChange={(option) => setSelectedTheme(option.label)}
-          style={styles.modalSelector}
-          cancelText="Close"
+      <ModalSelector
+        data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
+        initValue="Select Theme"
+        onChange={(option) => setSelectedTheme(option.label)}
+        style={styles.modalSelector}
+        cancelText="Close"
+      >
+        <Text style={styles.selectorText}>
+          {selectedTheme || "Select Theme"}
+        </Text>
+      </ModalSelector>
+
+      <ModalSelector
+        data={uniqueColors.map((color) => ({ key: color, label: color }))}
+        initValue="Select Color"
+        onChange={(option) => setSelectedColor(option.label)}
+        style={styles.modalSelector}
+        cancelText="Close"
+      >
+        <Text style={styles.selectorText}>
+          {selectedColor || "Select Color"}
+        </Text>
+      </ModalSelector>
+
+      <ModalSelector
+        data={[
+          { key: "yes", label: "3 Pieces" },
+          { key: "no", label: "One Piece" },
+        ]}
+        initValue="Select Option"
+        onChange={(option) => setSelectedThreePiece(option.key)}
+        style={styles.modalSelector}
+        cancelText="Close"
+      >
+        <Text style={styles.selectorText}>
+          {selectedThreePiece === null
+            ? "Number of pieces"
+            : selectedThreePiece === "yes"
+            ? "Yes"
+            : "No"}
+        </Text>
+      </ModalSelector>
+
+      <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
+        <Text style={styles.resetButtonText}>Reset Filters</Text>
+      </TouchableOpacity>
+
+      <View style={styles.productsContainer}>
+        {products.slice(0, visibleProducts).map((item) => (
+          <ProductItemWM
+            key={item.id}
+            item={item}
+            onPress={() =>
+              navigation.navigate("ProductInfo", {
+                // Directly navigate to ProductInfo
+                id: item.id,
+                title: item.name,
+                priceRange: {
+                  min: item.variants[0].price,
+                  max: item.variants[item.variants.length - 1].price,
+                },
+                carouselImages: item.images,
+                color: item.color,
+                size: item.variants[0].size,
+                item,
+              })
+            }
+          />
+        ))}
+      </View>
+
+      {visibleProducts < products.length && (
+        <TouchableOpacity
+          onPress={() => setVisibleProducts((prev) => prev + 14)}
+          style={styles.loadMoreBtn}
         >
-          <Text style={styles.selectorText}>
-            {selectedTheme || "Select Theme"}
-          </Text>
-        </ModalSelector>
-
-        <ModalSelector
-          data={uniqueColors.map((color) => ({ key: color, label: color }))}
-          initValue="Select Color"
-          onChange={(option) => setSelectedColor(option.label)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>
-            {selectedColor || "Select Color"}
-          </Text>
-        </ModalSelector>
-
-        <ModalSelector
-          data={[
-            { key: "yes", label: "3 Pieces" },
-            { key: "no", label: "One Piece" },
-          ]}
-          initValue="Select Option"
-          onChange={(option) => setSelectedThreePiece(option.key)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>
-            {selectedThreePiece === null
-              ? "Number of pieces"
-              : selectedThreePiece === "yes"
-              ? "Yes"
-              : "No"}
-          </Text>
-        </ModalSelector>
-
-        <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
-          <Text style={styles.resetButtonText}>Reset Filters</Text>
+          <Text style={styles.loadMoreText}>Load More</Text>
         </TouchableOpacity>
-
-        <View style={styles.productsContainer}>
-          {products.slice(0, visibleProducts).map((item) => (
-            <ProductItemWM
-              key={item.id}
-              item={item}
-              onPress={() =>
-                navigation.navigate("ProductInfo", {
-                  // Directly navigate to ProductInfo
-                  id: item.id,
-                  title: item.name,
-                  priceRange: {
-                    min: item.variants[0].price,
-                    max: item.variants[item.variants.length - 1].price,
-                  },
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item,
-                })
-              }
-            />
-          ))}
-        </View>
-
-        {visibleProducts < products.length && (
-          <TouchableOpacity
-            onPress={() => setVisibleProducts((prev) => prev + 14)}
-            style={styles.loadMoreBtn}
-          >
-            <Text style={styles.loadMoreText}>Load More</Text>
-          </TouchableOpacity>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+      )}
+    </ScrollView>
   );
 };
 
 export default ShopScreen;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#fff",
-    paddingTop: Platform.OS === "android" ? 40 : 0,
-  },
   container: {
     flex: 1,
     paddingHorizontal: 0,
@@ -210,7 +203,7 @@ const styles = StyleSheet.create({
   },
   modalSelector: {
     marginVertical: 7,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#DCDCDC",
     borderRadius: 8,
     padding: 10,
     marginHorizontal: 5,

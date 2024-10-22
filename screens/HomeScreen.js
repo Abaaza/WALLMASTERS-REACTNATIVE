@@ -81,140 +81,138 @@ const HomeScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <View style={styles.logoContainer}>
-          <Image
-            style={styles.logo}
-            source={require("../assets/13.jpg")}
-            resizeMode="cover"
-          ></Image>
-        </View>
-        {/* Search Bar */}
+    <ScrollView style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image
+          style={styles.logo}
+          source={require("../assets/13.jpg")}
+          resizeMode="cover"
+        ></Image>
+      </View>
+      {/* Search Bar */}
 
-        {/* Image Slider */}
-        <View style={styles.sliderContainer}>
-          <SliderBox
-            images={sliderImages}
-            autoPlay
-            circleLoop
-            dotColor="#000"
-            inactiveDotColor="#fff"
-            resizeMethod="resize"
-            ImageComponentStyle={styles.sliderImage} // Apply aspect ratio
+      {/* Image Slider */}
+      <View style={styles.sliderContainer}>
+        <SliderBox
+          images={sliderImages}
+          autoPlay
+          circleLoop
+          dotColor="#000"
+          inactiveDotColor="#fff"
+          resizeMethod="resize"
+          ImageComponentStyle={styles.sliderImage} // Apply aspect ratio
+        />
+      </View>
+
+      {/* Trending Deals */}
+      <Text style={styles.sectionTitle}>Trending Frames</Text>
+      <View style={styles.productsContainer}>
+        {randomDeals.map((item) => (
+          <ProductItemWM
+            key={item.id}
+            item={item}
+            onPress={() =>
+              navigation.navigate("ProductInfo", {
+                id: item.id,
+                title: item.name,
+                price: item.variants[0].price,
+                carouselImages: item.images,
+                color: item.color,
+                size: item.variants[0].size,
+                item,
+              })
+            }
           />
-        </View>
-
-        {/* Trending Deals */}
-        <Text style={styles.sectionTitle}>Trending Frames</Text>
-        <View style={styles.productsContainer}>
-          {randomDeals.map((item) => (
-            <ProductItemWM
-              key={item.id}
-              item={item}
-              onPress={() =>
-                navigation.navigate("ProductInfo", {
-                  id: item.id,
-                  title: item.name,
-                  price: item.variants[0].price,
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item,
-                })
-              }
-            />
-          ))}
-        </View>
-        <Text style={styles.sectionTitle}>Today's Offers</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {WMProducts.slice(0, 10).map((item, index) => (
-            <Pressable
-              key={`${item.id}-${index}`}
-              style={styles.productItem}
-              onPress={() => {
-                navigation.navigate("ProductInfo", {
-                  id: item.id,
-                  title: item.name,
-                  priceRange: {
-                    min: item.variants[0].price,
-                    max: item.variants[item.variants.length - 1].price,
-                  },
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item,
-                });
-                setTimeout(scrollToTop, 100); // Keep this if you need to scroll to the top
-              }}
-            >
-              <Image
-                source={{ uri: item.images[0] }}
-                style={styles.productImage}
-              />
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productPriceRange}>
-                {item.variants[0].price} -{" "}
-                {item.variants[item.variants.length - 1].price} EGP
-              </Text>
-              <Text style={styles.productColor}>
-                Colors: {item.color.join(", ")}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* Theme Selector */}
-        <Text style={styles.sectionTitle}>Select by theme</Text>
-
-        <ModalSelector
-          data={uniqueThemes.map((theme) => ({
-            key: theme,
-            label: theme,
-          }))}
-          initValue="Select Theme"
-          onChange={(option) => setTheme(option.label)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>{theme || "Choose a theme"}</Text>
-        </ModalSelector>
-
-        {/* Filtered Products Based on Theme */}
-        <View style={styles.productsContainer}>
-          {filteredProducts.slice(0, 4).map((item) => (
-            <ProductItemWM
-              key={item.id}
-              item={item}
-              onPress={() =>
-                navigation.navigate("ProductInfo", {
-                  // Navigate directly to ProductInfo
-                  id: item.id,
-                  title: item.name,
-                  priceRange: {
-                    min: item.variants[0].price,
-                    max: item.variants[item.variants.length - 1].price,
-                  },
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item,
-                })
-              }
-            />
-          ))}
-        </View>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ShopStack")}
-            style={styles.resetButton}
+        ))}
+      </View>
+      <Text style={styles.sectionTitle}>Today's Offers</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {WMProducts.slice(0, 10).map((item, index) => (
+          <Pressable
+            key={`${item.id}-${index}`}
+            style={styles.productItem}
+            onPress={() => {
+              navigation.navigate("ProductInfo", {
+                id: item.id,
+                title: item.name,
+                priceRange: {
+                  min: item.variants[0].price,
+                  max: item.variants[item.variants.length - 1].price,
+                },
+                carouselImages: item.images,
+                color: item.color,
+                size: item.variants[0].size,
+                item,
+              });
+              setTimeout(scrollToTop, 100); // Keep this if you need to scroll to the top
+            }}
           >
-            <Text style={styles.resetButtonText}>EXPLORE MORE IN SHOP</Text>
-          </TouchableOpacity>
-        </View>
+            <Image
+              source={{ uri: item.images[0] }}
+              style={styles.productImage}
+            />
+            <Text style={styles.productName}>{item.name}</Text>
+            <Text style={styles.productPriceRange}>
+              {item.variants[0].price} -{" "}
+              {item.variants[item.variants.length - 1].price} EGP
+            </Text>
+            <Text style={styles.productColor}>
+              Colors: {item.color.join(", ")}
+            </Text>
+          </Pressable>
+        ))}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Theme Selector */}
+      <Text style={styles.sectionTitle}>Select by theme</Text>
+
+      <ModalSelector
+        data={uniqueThemes.map((theme) => ({
+          key: theme,
+          label: theme,
+        }))}
+        initValue="Select Theme"
+        onChange={(option) => setTheme(option.label)}
+        style={styles.modalSelector}
+        cancelText="Close"
+      >
+        <Text style={styles.selectorText}>{theme || "Choose a theme"}</Text>
+      </ModalSelector>
+
+      {/* Filtered Products Based on Theme */}
+      <View style={styles.productsContainer}>
+        {filteredProducts.slice(0, 4).map((item) => (
+          <ProductItemWM
+            key={item.id}
+            item={item}
+            onPress={() =>
+              navigation.navigate("ProductInfo", {
+                // Navigate directly to ProductInfo
+                id: item.id,
+                title: item.name,
+                priceRange: {
+                  min: item.variants[0].price,
+                  max: item.variants[item.variants.length - 1].price,
+                },
+                carouselImages: item.images,
+                color: item.color,
+                size: item.variants[0].size,
+                item,
+              })
+            }
+          />
+        ))}
+      </View>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ShopStack")}
+          style={styles.resetButton}
+        >
+          <Text style={styles.resetButtonText}>EXPLORE MORE IN SHOP</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -224,7 +222,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "white",
-    paddingTop: Platform.OS === "android" ? 40 : 0,
   },
 
   productsContainer: {
