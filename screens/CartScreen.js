@@ -129,14 +129,15 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 0,
-    backgroundColor: "#000",
+    marginTop: 15,
+
     alignItems: "center",
     paddingBottom: 5,
   },
   headerText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#000",
   },
   subtotalContainer: {
     padding: 15,

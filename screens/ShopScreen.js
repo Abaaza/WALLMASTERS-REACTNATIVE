@@ -159,7 +159,7 @@ const ShopScreen = ({ route }) => {
             item={item}
             onPress={() =>
               navigation.navigate("ProductInfo", {
-                // Directly navigate to ProductInfo
+                // Navigate directly to ProductInfo inside ShopStackNavigator
                 id: item.id,
                 title: item.name,
                 priceRange: {
@@ -169,7 +169,7 @@ const ShopScreen = ({ route }) => {
                 carouselImages: item.images,
                 color: item.color,
                 size: item.variants[0].size,
-                item,
+                item, // Pass the entire item object
               })
             }
           />

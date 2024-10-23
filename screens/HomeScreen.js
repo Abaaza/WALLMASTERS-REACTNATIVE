@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Image,
   Platform,
@@ -32,6 +32,13 @@ const HomeScreen = () => {
   const [filteredProducts, setFilteredProducts] = useState(WMProducts);
 
   const screenWidth = Dimensions.get("window").width;
+
+  const scrollViewRef = useRef(null); // Create a reference for the ScrollView
+
+  // Function to scroll to the top
+  const scrollToTop = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
 
   const sliderImages = [
     require("../assets/1.jpg"),
@@ -111,20 +118,24 @@ const HomeScreen = () => {
           <ProductItemWM
             key={item.id}
             item={item}
-            onPress={() =>
-              navigation.navigate("ProductInfo", {
-                id: item.id,
-                title: item.name,
-                price: item.variants[0].price,
-                carouselImages: item.images,
-                color: item.color,
-                size: item.variants[0].size,
-                item,
-              })
-            }
+            onPress={() => {
+              navigation.navigate("ShopStack", {
+                screen: "ProductInfo", // Navigate to ProductInfo inside ShopStack
+                params: {
+                  id: item.id,
+                  title: item.name,
+                  price: item.variants[0].price,
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item, // Pass the entire item object
+                },
+              });
+            }}
           />
         ))}
       </View>
+
       <Text style={styles.sectionTitle}>Today's Offers</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {WMProducts.slice(0, 10).map((item, index) => (
@@ -142,9 +153,9 @@ const HomeScreen = () => {
                 carouselImages: item.images,
                 color: item.color,
                 size: item.variants[0].size,
-                item,
+                item, // Pass the entire item object
               });
-              setTimeout(scrollToTop, 100); // Keep this if you need to scroll to the top
+              setTimeout(scrollToTop, 100); // Optional: Scroll to top after navigation
             }}
           >
             <Image
@@ -185,9 +196,9 @@ const HomeScreen = () => {
           <ProductItemWM
             key={item.id}
             item={item}
-            onPress={() =>
+            onPress={() => {
               navigation.navigate("ProductInfo", {
-                // Navigate directly to ProductInfo
+                // Navigate directly to ProductInfo screen
                 id: item.id,
                 title: item.name,
                 priceRange: {
@@ -197,9 +208,9 @@ const HomeScreen = () => {
                 carouselImages: item.images,
                 color: item.color,
                 size: item.variants[0].size,
-                item,
-              })
-            }
+                item, // Pass the entire item object
+              });
+            }}
           />
         ))}
       </View>

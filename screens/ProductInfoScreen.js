@@ -162,20 +162,23 @@ const ProductInfoScreen = () => {
               key={`${item.id}-${index}`}
               style={styles.productItem}
               onPress={() => {
-                // Navigate directly to ProductInfo
-                navigation.navigate("ProductInfo", {
-                  id: item.id,
-                  title: item.name,
-                  priceRange: {
-                    min: item.variants[0].price,
-                    max: item.variants[item.variants.length - 1].price,
+                navigation.navigate("ShopStack", {
+                  screen: "ProductInfo", // Target ProductInfo inside ShopStack
+                  params: {
+                    id: item.id,
+                    title: item.name,
+                    priceRange: {
+                      min: item.variants[0].price,
+                      max: item.variants[item.variants.length - 1].price,
+                    },
+                    carouselImages: item.images,
+                    color: item.color,
+                    size: item.variants[0].size,
+                    item,
                   },
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item,
                 });
-                setTimeout(scrollToTop, 100); // Optional: Scroll to the top
+
+                setTimeout(scrollToTop, 100); // Optional: Scroll to top after navigation
               }}
             >
               <Image

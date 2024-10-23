@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet, Button, TouchableOpacity } from "react-native";
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -9,6 +9,7 @@ import {
   FontAwesome5,
   MaterialIcons,
 } from "@expo/vector-icons";
+
 import HomeScreen from "../screens/HomeScreen";
 import ProductInfoScreen from "../screens/ProductInfoScreen";
 import AddressScreen from "../screens/AddressScreen";
@@ -18,52 +19,33 @@ import OrderScreen from "../screens/OrderScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ShopScreen from "../screens/ShopScreen";
 
-// Stack Navigators
+// Stack and Tab Navigators
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Standalone Product Info Screen Wrapper
-function ProductInfoScreenWrapper({ route, navigation }) {
-  const { title, item } = route.params || {};
-  const itemName = title || item?.name || "Product Info";
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: () => <View style={styles.titleContainer}></View>,
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Text style={styles.title}>{itemName}</Text>
-        </TouchableOpacity>
-      ),
-      headerTitleAlign: "center", // Center the title
-    });
-  }, [navigation, itemName]);
-
-  return <ProductInfoScreen />;
-}
-
-// Shop Stack Navigator
+// Shop Stack Navigator with Product Info Screen
 function ShopStackNavigator() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          height: 60,
-          backgroundColor: "#fff",
-        },
-        headerTitleStyle: {
-          fontSize: 22,
-          fontWeight: "bold",
-        },
-        headerTitleAlign: "center",
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ShopMain" component={ShopScreen} />
       <Stack.Screen
-        name="ShopMain"
-        component={ShopScreen}
-        options={{ headerShown: false }}
+        name="ProductInfo"
+        component={ProductInfoScreen}
+        options={({ route, navigation }) => ({
+          headerShown: true, // Show header only here
+          title: route.params?.title || "Product Info",
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+          ),
+          headerStyle: { height: 60, backgroundColor: "#fff" },
+          headerTitleStyle: { fontSize: 22, fontWeight: "bold" },
+          headerTitleAlign: "center",
+        })}
       />
     </Stack.Navigator>
   );
@@ -72,24 +54,8 @@ function ShopStackNavigator() {
 // Home Stack Navigator
 function HomeStackNavigator() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: {
-          height: 60,
-          backgroundColor: "#fff",
-        },
-        headerTitleStyle: {
-          fontSize: 20,
-          fontWeight: "bold",
-        },
-        headerTitleAlign: "center",
-      }}
-    >
-      <Stack.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{ headerShown: false }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
     </Stack.Navigator>
   );
 }
@@ -97,14 +63,13 @@ function HomeStackNavigator() {
 // Bottom Tabs Navigator
 function BottomTabs() {
   return (
-    <Tab.Navigator>
+    <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen
         name="HomeStack"
         component={HomeStackNavigator}
         options={{
           tabBarLabel: "Home",
           tabBarLabelStyle: { color: "#000" },
-          headerShown: false,
           tabBarIcon: ({ focused }) =>
             focused ? (
               <Entypo name="home" size={24} color="#ff6347" />
@@ -119,7 +84,6 @@ function BottomTabs() {
         options={{
           tabBarLabel: "Shop",
           tabBarLabelStyle: { color: "#000" },
-          headerShown: false,
           tabBarIcon: ({ focused }) =>
             focused ? (
               <FontAwesome5 name="store" size={20} color="#ff6347" />
@@ -127,14 +91,20 @@ function BottomTabs() {
               <FontAwesome5 name="store" size={20} color="#000" />
             ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault(); // Prevent the default behavior
+            navigation.navigate("ShopStack", { screen: "ShopMain" }); // Ensure it always opens the main shop screen
+          },
+        })}
       />
+
       <Tab.Screen
         name="Cart"
         component={CartScreen}
         options={{
           tabBarLabel: "Cart",
           tabBarLabelStyle: { color: "#000" },
-          headerShown: false,
           tabBarIcon: ({ focused }) =>
             focused ? (
               <AntDesign name="shoppingcart" size={24} color="#ff6347" />
@@ -149,7 +119,6 @@ function BottomTabs() {
         options={{
           tabBarLabel: "Profile",
           tabBarLabelStyle: { color: "#000" },
-          headerShown: false,
           tabBarIcon: ({ focused }) =>
             focused ? (
               <MaterialIcons name="person" size={24} color="#ff6347" />
@@ -166,37 +135,11 @@ function BottomTabs() {
 export default function StackNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Main">
-        <Stack.Screen
-          name="Main"
-          component={BottomTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="ProductInfo"
-          component={ProductInfoScreenWrapper}
-          options={{ headerShown: true }} // Ensure header is shown
-        />
-        <Stack.Screen
-          name="Address"
-          component={AddressScreen}
-          options={{
-            headerStyle: {
-              height: 60,
-              backgroundColor: "#f8f8f8",
-            },
-          }}
-        />
-        <Stack.Screen
-          name="Confirm"
-          component={ConfirmationScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Order"
-          component={OrderScreen}
-          options={{ headerShown: false }}
-        />
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={BottomTabs} />
+        <Stack.Screen name="Address" component={AddressScreen} />
+        <Stack.Screen name="Confirm" component={ConfirmationScreen} />
+        <Stack.Screen name="Order" component={OrderScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -204,27 +147,12 @@ export default function StackNavigator() {
 
 // Styles
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  titleContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
   backButton: {
     backgroundColor: "transparent",
     padding: 10,
   },
   backButtonText: {
-    color: "#ff6347",
-    fontSize: 16,
+    color: "#000",
+    fontSize: 18,
   },
 });
