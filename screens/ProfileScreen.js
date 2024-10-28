@@ -9,74 +9,91 @@ import {
   StatusBar,
   FlatList,
   Image,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const [userName, setUserName] = useState("");
+  const [loading, setLoading] = useState(true); // Loading state for async operations
 
   const menuOptions = [
-    { id: "1", title: "Your Orders" },
-    { id: "2", title: "Your Account" },
-    { id: "3", title: "Buy Again" },
-    { id: "4", title: "Saved Items" },
-    { id: "5", title: "Saved Addresses" },
-    { id: "6", title: "Logout", action: "logout" },
+    { id: "1", title: "Your Orders", screen: "Your Orders" },
+    { id: "2", title: "Your Account", screen: "Your Account" },
+    { id: "3", title: "Saved Items", screen: "Saved Items" },
+
+    { id: "5", title: "Logout", action: "logout" },
   ];
 
+  // Check if the user is logged in
   useEffect(() => {
-    navigation.setOptions({
-      headerTitle: "",
-      headerStyle: { backgroundColor: "#fff" },
-      headerLeft: () => (
-        <Image
-          style={styles.headerImage}
-          source={{
-            uri: "https://assets.stickpng.com/thumbs/580b57fcd9996e24bc43c518.png",
-          }}
-        />
-      ),
-      headerRight: () => (
-        <View style={styles.headerIcons}>
-          <Ionicons name="notifications-outline" size={24} color="black" />
-          <AntDesign name="search1" size={24} color="black" />
-        </View>
-      ),
-    });
+    const checkAuthStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (token) {
+          const storedName = await AsyncStorage.getItem("userName");
+          setUserName(storedName || "User");
+        } else {
+          navigation.replace("Login"); // Redirect to Login if not logged in
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+      } finally {
+        setLoading(false); // Stop loading when check is done
+      }
+    };
+
+    checkAuthStatus();
   }, [navigation]);
 
-  const handlePress = (action) => {
+  const handlePress = (screen, action) => {
     if (action === "logout") {
-      console.log("Logged out");
-      navigation.replace("Login");
-    } else {
-      console.log(`Navigating to ${action}`);
+      Alert.alert("Logout Confirmation", "Are you sure you want to log out?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          onPress: async () => {
+            await AsyncStorage.removeItem("authToken");
+            navigation.replace("Login");
+          },
+        },
+      ]);
+    } else if (screen) {
+      navigation.navigate(screen);
     }
   };
 
   const renderItem = ({ item }) => (
     <Pressable
       style={styles.listItem}
-      onPress={() => handlePress(item.action || item.title)}
+      onPress={() => handlePress(item.screen, item.action)}
     >
       <Text style={styles.listItemText}>{item.title}</Text>
     </Pressable>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeContainer}>
-      <View style={styles.logoContainer}>
-        <Image
-          style={styles.logo}
-          source={require("../assets/13.jpg")}
-          resizeMode="cover"
-        ></Image>
-      </View>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <Image
+        style={styles.logo}
+        source={require("../assets/13.jpg")}
+        resizeMode="cover"
+      />
       <ScrollView style={styles.container}>
-        <Text style={styles.welcomeText}>Welcome to your profile</Text>
-
+        <Text style={styles.welcomeText}>Welcome, {userName}!</Text>
         <FlatList
           data={menuOptions}
           renderItem={renderItem}
@@ -98,6 +115,11 @@ const styles = StyleSheet.create({
   container: {
     padding: 10,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerImage: {
     width: 140,
     height: 120,
@@ -112,8 +134,8 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 24,
     fontWeight: "bold",
-
     marginTop: 25,
+    textAlign: "center",
   },
   listContainer: {
     marginTop: 20,
@@ -123,19 +145,19 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 8,
     backgroundColor: "#E0E0E0",
+    alignItems: "center",
   },
   listItemText: {
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "left",
   },
   logoContainer: {
-    width: "100%", // Full width of the container
-    alignItems: "center", // Centering the image
+    width: "100%",
+    alignItems: "center",
   },
   logo: {
-    width: "100%", // Image takes 100% width
-    height: undefined, // Allow height to adjust automatically
+    width: "100%",
+    height: undefined,
     aspectRatio: 10,
   },
 });

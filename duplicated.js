@@ -18,9 +18,6 @@ const ConfirmationScreen = () => {
 
   const address = route.params?.address || {};
   const cart = useSelector((state) => state.cart.cart);
-  console.log("CartCC:", cart);
-  const userId = useSelector((state) => state.cart.userId); // Get userId from Redux
-  console.log("User ID:", userId); // Debug: check if the userId is being logged correctly
 
   const subtotal =
     cart?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
@@ -30,7 +27,6 @@ const ConfirmationScreen = () => {
   const handlePlaceOrder = async () => {
     try {
       const orderData = {
-        userId: userId || "guest", // Include userId in the payload
         products: cart.map((item) => ({
           productId: item.id,
           name: item.name,
@@ -51,12 +47,8 @@ const ConfirmationScreen = () => {
       );
       console.log("Order placed successfully:", response.data);
 
-      navigation.navigate("Order", {
-        orderId: response.data.order.orderId, // Pass the backend order ID
-        subtotal: subtotal,
-        shippingCost: shippingCost,
-        total: total,
-      });
+      Alert.alert("Success", "Your order has been placed!");
+      navigation.replace("Order");
     } catch (error) {
       console.error("Order placement failed:", error);
       Alert.alert("Error", "Failed to place the order. Please try again.");
@@ -67,7 +59,6 @@ const ConfirmationScreen = () => {
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Order Summary</Text>
 
-      {/* Shipping Address Section */}
       <View style={styles.section}>
         <Text style={styles.subHeader}>Shipping Address:</Text>
         <Text>Name: {address.name || "N/A"}</Text>
@@ -78,7 +69,6 @@ const ConfirmationScreen = () => {
         <Text>Postal Code: {address.postalCode}</Text>
       </View>
 
-      {/* Cart Items Section */}
       <View style={styles.section}>
         <Text style={styles.subHeader}>Items in Your Order:</Text>
         {cart.map((item, index) => (
@@ -94,7 +84,6 @@ const ConfirmationScreen = () => {
         ))}
       </View>
 
-      {/* Total Price Section */}
       <View style={styles.section}>
         <Text style={styles.subHeader}>Order Summary:</Text>
         <Text style={styles.summaryText}>Subtotal: {subtotal} EGP</Text>
@@ -104,7 +93,6 @@ const ConfirmationScreen = () => {
         <Text style={styles.totalText}>Total: {total} EGP</Text>
       </View>
 
-      {/* Place Order Button */}
       <Pressable onPress={handlePlaceOrder} style={styles.orderButton}>
         <Text style={styles.buttonText}>Place Order</Text>
       </Pressable>
@@ -115,87 +103,32 @@ const ConfirmationScreen = () => {
 export default ConfirmationScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-    padding: 20,
-  },
+  container: { flex: 1, backgroundColor: "#f5f5f5", padding: 20 },
   header: {
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
-    color: "#333",
   },
   section: {
     marginBottom: 20,
     padding: 10,
     backgroundColor: "#fff",
     borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  subHeader: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-    color: "#444",
-  },
-  cartItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    paddingBottom: 10,
-  },
-  itemImage: {
-    width: 80,
-    height: 80,
-    resizeMode: "contain",
-    borderRadius: 8,
-    marginRight: 10,
-  },
-  itemDetails: {
-    flex: 1,
-  },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#ff6347",
-    marginTop: 4,
-  },
-  summaryText: {
-    fontSize: 16,
-    color: "#333",
-    marginBottom: 4,
-  },
-  totalText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#ff6347",
-    marginTop: 8,
-  },
+  subHeader: { fontSize: 18, fontWeight: "600", marginBottom: 10 },
+  cartItem: { flexDirection: "row", marginVertical: 10, borderBottomWidth: 1 },
+  itemImage: { width: 80, height: 80, marginRight: 10 },
+  itemDetails: { flex: 1 },
+  itemTitle: { fontSize: 16, fontWeight: "600" },
+  itemPrice: { fontSize: 14, color: "#ff6347", marginTop: 4 },
+  summaryText: { fontSize: 16, marginBottom: 4 },
+  totalText: { fontSize: 20, fontWeight: "bold", color: "#ff6347" },
   orderButton: {
     backgroundColor: "#ff6347",
     padding: 10,
     borderRadius: 8,
-    marginHorizontal: 10,
     alignItems: "center",
-    marginBottom: 10,
-    marginTop: 15,
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fff",
-  },
+  buttonText: { fontSize: 16, fontWeight: "bold", color: "#fff" },
 });

@@ -1,13 +1,15 @@
+import React, { useState, useEffect } from "react";
 import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
+  View,
   Text,
   TextInput,
-  View,
+  Pressable,
+  Alert,
+  StyleSheet,
+  ScrollView,
 } from "react-native";
-import React, { useState } from "react";
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
 const AddressScreen = () => {
@@ -16,24 +18,79 @@ const AddressScreen = () => {
   const [mobileNo, setMobileNo] = useState("");
   const [houseNo, setHouseNo] = useState("");
   const [street, setStreet] = useState("");
-  const [landmark, setLandmark] = useState("");
+  const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
+  const [isAddressLoaded, setIsAddressLoaded] = useState(false); // Track if address was loaded
+
+  useEffect(() => {
+    loadSavedAddress();
+  }, []);
+
+  const loadSavedAddress = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        return;
+      }
+
+      const response = await axios.get(
+        `http://192.168.1.100:3000/addresses/${userId}`
+      );
+
+      if (response.data && response.data.length > 0) {
+        const address = response.data[0]; // Assuming only one saved address
+
+        setName(address.name);
+        setMobileNo(address.mobileNo);
+        setHouseNo(address.houseNo);
+        setStreet(address.street);
+        setCity(address.city);
+        setPostalCode(address.postalCode);
+        setIsAddressLoaded(true); // Mark address as loaded
+      }
+    } catch (error) {
+      console.error("Error loading address:", error);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const address = { name, mobileNo, houseNo, street, city, postalCode };
+
+      console.log("Saving address:", address);
+
+      const response = await axios.post(
+        `http://192.168.1.100:3000/addresses/${userId}`,
+        { address }
+      );
+
+      console.log("Address saved successfully:", response.data);
+      navigation.navigate("Order Summary", { address });
+    } catch (error) {
+      console.error("Error saving address:", error);
+    }
+  };
 
   const handleProceedToConfirm = () => {
-    const address = { name, mobileNo, houseNo, street, landmark, postalCode };
+    const address = { name, mobileNo, houseNo, street, city, postalCode };
 
     if (Object.values(address).some((field) => field === "")) {
       Alert.alert("Error", "Please fill all fields.");
       return;
     }
 
-    navigation.navigate("Confirm", { address });
+    if (isAddressLoaded) {
+      // If address is already loaded, proceed to checkout with the existing one
+      navigation.navigate("Order Summary", { address });
+    } else {
+      // Otherwise, save the new address and proceed
+      handleSaveAddress();
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>Enter Address</Text>
-
       <TextInput
         value={name}
         onChangeText={setName}
@@ -44,6 +101,7 @@ const AddressScreen = () => {
         value={mobileNo}
         onChangeText={setMobileNo}
         placeholder="Mobile No"
+        keyboardType="phone-pad"
         style={styles.input}
       />
       <TextInput
@@ -59,20 +117,23 @@ const AddressScreen = () => {
         style={styles.input}
       />
       <TextInput
-        value={landmark}
-        onChangeText={setLandmark}
-        placeholder="Landmark"
+        value={city}
+        onChangeText={setCity}
+        placeholder="City"
         style={styles.input}
       />
       <TextInput
         value={postalCode}
         onChangeText={setPostalCode}
         placeholder="Postal Code"
+        keyboardType="numeric"
         style={styles.input}
       />
 
       <Pressable onPress={handleProceedToConfirm} style={styles.proceedButton}>
-        <Text style={styles.buttonText}>Proceed to Confirmation</Text>
+        <Text style={styles.buttonText}>
+          {isAddressLoaded ? "Proceed to Checkout" : "Save and Proceed"}
+        </Text>
       </Pressable>
     </ScrollView>
   );
@@ -82,7 +143,6 @@ export default AddressScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   input: {
     borderColor: "#D0D0D0",
     borderWidth: 1,
@@ -91,11 +151,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   proceedButton: {
-    backgroundColor: "#FFC72C",
-    padding: 15,
-    borderRadius: 5,
+    backgroundColor: "#ff6347",
+    padding: 10,
+    borderRadius: 8,
+    marginHorizontal: 10,
     alignItems: "center",
-    marginTop: 20,
+    marginBottom: 10,
+    marginTop: 15,
   },
-  buttonText: { fontWeight: "bold" },
+  buttonText: { fontSize: 16, fontWeight: "bold", color: "#fff" },
 });

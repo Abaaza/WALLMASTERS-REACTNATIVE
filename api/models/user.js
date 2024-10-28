@@ -1,48 +1,37 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    savedAddresses: [
+      {
+        name: { type: String },
+        mobileNo: { type: String },
+        houseNo: { type: String },
+        street: { type: String },
+        city: { type: String },
+        postalCode: { type: String },
+      },
+    ],
+    savedItems: [
+      {
+        productId: { type: String, required: true },
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        image: { type: String },
+      },
+    ],
   },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  verified: {
-    type: Boolean,
-    default: false,
-  },
-  verificationToken: String,
-  addresses: [
-    {
-      name: String,
-      mobileNo: String,
-      houseNo: String,
-      street: String,
-      landmark: String,
-      city: String,
-      country: String,
-      postalCode: String,
-    },
-  ],
-  orders: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order',
-    },
-  ],
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true }
+);
 
-const User = mongoose.model('User', userSchema);
+// Comment out or remove the pre-save middleware to stop hashing the password
+// userSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) return next();
+//   this.password = await bcrypt.hash(this.password, 10);
+//   next();
+// });
 
-module.exports = User;
+module.exports = mongoose.model("User", userSchema);

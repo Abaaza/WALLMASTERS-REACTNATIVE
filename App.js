@@ -5,7 +5,7 @@ import StackNavigator from "./navigation/StackNavigator";
 import { Provider } from "react-redux";
 import store from "./store";
 import { ModalPortal } from "react-native-modals";
-import AppLayout from "./screens/AppLayout"; // Import AppLayout
+import AppLayout from "./components/AppLayout"; // Import AppLayout
 
 export default function App() {
   return (

@@ -8,44 +8,137 @@ import {
   Text,
   View,
   Image,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../redux/CartReducer";
 import DropDownPicker from "react-native-dropdown-picker";
 import WMProducts from "../assets/WMProducts";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 const ProductInfoScreen = () => {
   const route = useRoute();
-  const { width } = Dimensions.get("window");
-  const height = (width * 100) / 100;
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
+  // Safely access route params
+  const {
+    item = {},
+    carouselImages = [],
+    size = "N/A",
+    price = 0,
+    title = "",
+  } = route.params || {};
+
+  console.log("ProductInfoScreen loaded with item:", item); // Debugging
+
+  const [isSaved, setIsSaved] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(
-    route.params.item.variants[0]
+    item.variants?.[0] || {}
   );
   const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0); // Track active thumbnail
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const { width } = Dimensions.get("window");
+  const height = (width * 100) / 100;
 
   const scrollViewRef = useRef(null);
   const imageScrollRef = useRef(null);
 
-  // Update the header title dynamically with the product name
   useEffect(() => {
     navigation.setOptions({
-      title: route.params.item.name, // Set the product name in the header
+      title: item.name || "Product Info", // Fallback title
     });
-  }, [navigation, route.params.item.name]);
+  }, [navigation, item.name]);
 
-  const addItemToCart = (item) => {
+  useEffect(() => {
+    if (item.id) {
+      checkIfSaved(item.id); // Ensure productId is passed
+    }
+  }, [item]);
+
+  const checkIfSaved = async (productId) => {
+    try {
+      console.log("Checking if product is saved:", productId); // Debugging
+
+      const userId = await AsyncStorage.getItem("userId");
+      const token = await AsyncStorage.getItem("authToken");
+
+      if (!userId || !token) {
+        return;
+      }
+
+      const response = await axios.get(
+        `http://192.168.1.100:3000/saved-items/${userId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Saved items response:", response.data); // Debugging
+
+      const isProductSaved = response.data.some(
+        (savedItem) => savedItem.productId === productId
+      );
+
+      setIsSaved(isProductSaved);
+    } catch (error) {
+      console.error("Error checking if product is saved:", error);
+    }
+  };
+
+  const saveForLater = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      const token = await AsyncStorage.getItem("authToken");
+
+      if (!userId || !token) {
+        return;
+      }
+
+      const productToSave = {
+        productId: item.id,
+        name: item.name,
+        size: selectedVariant.size || "N/A",
+        price: selectedVariant.price || 0,
+        image: item.images?.[0] || "",
+      };
+
+      console.log("Saving product:", productToSave); // Debugging
+
+      const response = await axios.post(
+        `http://192.168.1.100:3000/save-for-later/${userId}`,
+        { product: productToSave },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Save response:", response.data); // Debugging
+
+      setIsSaved(true);
+    } catch (error) {
+      console.error("Error saving product for later:", error);
+      Alert.alert("Error", "Failed to save product for later.");
+    }
+  };
+
+  const addItemToCart = () => {
     const productToAdd = {
       ...item,
       size: selectedVariant.size,
       price: selectedVariant.price,
       quantity: 1,
     };
+
+    console.log("Adding product to cart:", productToAdd); // Debugging
+
     setAddedToCart(true);
     dispatch(addToCart(productToAdd));
     setTimeout(() => setAddedToCart(false), 60000);
@@ -53,10 +146,7 @@ const ProductInfoScreen = () => {
 
   const scrollToImage = (index) => {
     setActiveIndex(index);
-    imageScrollRef.current?.scrollTo({
-      x: index * width,
-      animated: true,
-    });
+    imageScrollRef.current?.scrollTo({ x: index * width, animated: true });
   };
 
   const scrollToTop = () => {
@@ -86,11 +176,26 @@ const ProductInfoScreen = () => {
             <ImageBackground
               key={index}
               source={{ uri: image }}
-              style={{ width, height, marginTop: 25 }}
+              style={{ width, height }}
               resizeMode="contain"
             />
           ))}
         </ScrollView>
+        <View style={styles.fixedButtonContainer2}>
+          <View style={styles.container}>
+            <Pressable
+              onPress={() => saveForLater(item)}
+              style={[styles.saveButton, isSaved && styles.savedButton]}
+              disabled={isSaved} // Disable button when item is saved
+            >
+              <Text style={styles.saveButtonText}>
+                {isSaved ? "Saved" : "Save for Later"}
+              </Text>
+            </Pressable>
+
+            {/* Other UI elements */}
+          </View>
+        </View>
 
         <View style={styles.thumbnailContainer}>
           {route.params.carouselImages.map((image, index) => (
@@ -145,11 +250,33 @@ const ProductInfoScreen = () => {
             </Text>
             <View style={styles.bulletContainer}>
               <Text style={styles.bulletPoint}>
-                • High definition picture printed on canvas with waterproof,
+                High definition picture printed on canvas with waterproof,
                 fade-resistant, environmentally-friendly inks.
               </Text>
               <Text style={styles.bulletPoint}>
-                • Suitable for living room, bedroom, bathroom, kitchen.
+                This artwork is for living room, bedroom, bathroom, kitchen.
+              </Text>
+              <Text style={styles.bulletPoint}>
+                Stretched and stapled by professionals on solid wood frame.
+              </Text>
+              <Text style={styles.bulletPoint}>
+                The best quality canvas for texture and finish, premium inks for
+                vivid color, hand-stretched, great for wall decor.
+              </Text>
+              <Text style={styles.bulletPoint}>
+                All our frames come in a 2.8cm thickness, providing a rich
+                appearance on your wall.
+              </Text>
+              <Text style={styles.bulletPoint}>
+                Your paintings will be carefully packaged to ensure they reach
+                you in perfect condition, ready to decorate your home.
+              </Text>
+              <Text style={styles.productDescriptionTitle}>Warm Attention</Text>
+              <Text style={styles.bulletPoint}>
+                The actual color may be slightly different from the picture.
+              </Text>
+              <Text style={styles.bulletPoint}>
+                We recommend measuring your wall before purchase.
               </Text>
             </View>
           </View>
@@ -217,20 +344,12 @@ export default ProductInfoScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: { paddingBottom: 80 },
-  thumbnailContainer: { flexDirection: "row", marginVertical: 10 },
-  thumbnailImage: { width: 80, height: 80, marginRight: 10 },
+
   activeThumbnail: { borderColor: "blue", borderWidth: 2 },
 
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContent: {
-    paddingBottom: 80,
-  },
   thumbnailContainer: {
     flexDirection: "row",
-    marginVertical: 10,
+    marginBottom: 4,
     paddingHorizontal: 10,
   },
   thumbnailImage: {
@@ -238,6 +357,7 @@ const styles = StyleSheet.create({
     height: 80,
     marginRight: 10,
     borderRadius: 8,
+    alignItems: "flex-start",
   },
   productDetails: {
     padding: 10,
@@ -272,23 +392,28 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 18, // Larger text in the dropdown menu
+    fontWeight: "500",
   },
   deliveryInfo: {
     padding: 10,
   },
   totalText: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontSize: 17,
+    fontWeight: "600",
+    marginVertical: 2,
   },
   deliveryText: {
-    color: "#00CED1",
-    fontSize: 18,
+    color: "#ff6347",
+    fontSize: 17,
+    marginVertical: 1,
+    fontWeight: "500",
   },
   stockText: {
     color: "green",
-    marginHorizontal: 10,
+
     fontWeight: "500",
     marginLeft: 1,
+    marginVertical: 1,
   },
   fixedButtonContainer: {
     position: "absolute",
@@ -301,7 +426,7 @@ const styles = StyleSheet.create({
     borderTopColor: "#D0D0D0",
   },
   addButton: {
-    backgroundColor: "#FFC72C",
+    backgroundColor: "#ff6347",
     paddingVertical: 15,
     borderRadius: 20,
     alignItems: "center",
@@ -338,15 +463,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginTop: 10,
+    textAlign: "center",
+    marginBottom: 4,
   },
   bulletContainer: {
     marginTop: 5,
-    paddingLeft: 15,
   },
   bulletPoint: {
     fontSize: 16,
-    marginBottom: 5,
+    marginVertical: 4,
     lineHeight: 22,
+    textAlign: "center",
+    padding: 5,
   },
   sectionTitle: {
     fontSize: 16,
@@ -380,7 +508,7 @@ const styles = StyleSheet.create({
   productPriceRange: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#FF6F00",
+    color: "#ff6347",
     marginVertical: 4,
   },
   productColor: {
@@ -410,12 +538,38 @@ const styles = StyleSheet.create({
   productPriceRange: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#FF6F00",
+    color: "#ff6347",
     marginVertical: 4,
   },
   productColor: {
     fontSize: 12,
     color: "#555",
     marginBottom: 4,
+  },
+
+  saveButton: {
+    alignItems: "center",
+    justifyContent: "center", // Center text inside the button
+    marginTop: 5,
+    marginRight: 7,
+
+    borderRadius: 0, // Optional: Rounded corners
+    borderWidth: 1, // Border width
+    borderColor: "#000", // Border color
+  },
+
+  fixedButtonContainer2: {
+    alignItems: "flex-end", // Align to the right side of the parent
+  },
+
+  saveButtonText: {
+    color: "#000",
+    fontSize: 13, // Adjusted font size to fit inside the small square
+    fontWeight: "400",
+    textAlign: "center", // Center the text
+    padding: 2,
+  },
+  savedButton: {
+    backgroundColor: "#ff6347", // Green when saved
   },
 });

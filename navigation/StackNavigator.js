@@ -18,25 +18,38 @@ import ConfirmationScreen from "../screens/ConfirmationScreen";
 import OrderScreen from "../screens/OrderScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ShopScreen from "../screens/ShopScreen";
+import YourOrders from "../screens/YourOrders";
+import AccountScreen from "../screens/AccountScreen";
+import SavedItemsScreen from "../screens/SavedItemsScreen";
+import RegisterScreen from "../screens/RegisterScreen";
+import LoginScreen from "../screens/LoginScreen";
+import SavedAddressesScreen from "../screens/SavedAddressesScreen";
+import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 
 // Stack and Tab Navigators
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Shop Stack Navigator with Product Info Screen
+// Shop Stack Navigator
+// Shop Stack Navigator
+// Shop Stack Navigator
 function ShopStackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ShopMain" component={ShopScreen} />
+    <Stack.Navigator>
+      <Stack.Screen
+        name="ShopMain"
+        component={ShopScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="ProductInfo"
         component={ProductInfoScreen}
         options={({ route, navigation }) => ({
-          headerShown: true, // Show header only here
+          headerShown: true,
           title: route.params?.title || "Product Info",
           headerLeft: () => (
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
+              onPress={() => navigation.navigate("ShopMain")} // Ensure it always navigates back to Shop
               style={styles.backButton}
             >
               <Text style={styles.backButtonText}>Back</Text>
@@ -60,6 +73,78 @@ function HomeStackNavigator() {
   );
 }
 
+// Profile Stack Navigator
+function ProfileStackNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen
+        name="Your Orders"
+        component={YourOrders}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Your Account"
+        component={AccountScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Saved Addresses"
+        component={SavedAddressesScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Saved Items"
+        component={SavedItemsScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ headerShown: true, title: "Change Password" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Cart Stack Navigator
+function CartStackNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Enter Address"
+        component={AddressScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Order Summary"
+        component={ConfirmationScreen}
+        options={{ headerShown: true }}
+      />
+      <Stack.Screen
+        name="Order"
+        component={OrderScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Bottom Tabs Navigator
 function BottomTabs() {
   return (
@@ -69,7 +154,6 @@ function BottomTabs() {
         component={HomeStackNavigator}
         options={{
           tabBarLabel: "Home",
-          tabBarLabelStyle: { color: "#000" },
           tabBarIcon: ({ focused }) =>
             focused ? (
               <Entypo name="home" size={24} color="#ff6347" />
@@ -83,7 +167,6 @@ function BottomTabs() {
         component={ShopStackNavigator}
         options={{
           tabBarLabel: "Shop",
-          tabBarLabelStyle: { color: "#000" },
           tabBarIcon: ({ focused }) =>
             focused ? (
               <FontAwesome5 name="store" size={20} color="#ff6347" />
@@ -91,20 +174,13 @@ function BottomTabs() {
               <FontAwesome5 name="store" size={20} color="#000" />
             ),
         }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault(); // Prevent the default behavior
-            navigation.navigate("ShopStack", { screen: "ShopMain" }); // Ensure it always opens the main shop screen
-          },
-        })}
       />
 
       <Tab.Screen
         name="Cart"
-        component={CartScreen}
+        component={CartStackNavigator}
         options={{
           tabBarLabel: "Cart",
-          tabBarLabelStyle: { color: "#000" },
           tabBarIcon: ({ focused }) =>
             focused ? (
               <AntDesign name="shoppingcart" size={24} color="#ff6347" />
@@ -115,10 +191,9 @@ function BottomTabs() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStackNavigator}
         options={{
           tabBarLabel: "Profile",
-          tabBarLabelStyle: { color: "#000" },
           tabBarIcon: ({ focused }) =>
             focused ? (
               <MaterialIcons name="person" size={24} color="#ff6347" />
@@ -132,14 +207,11 @@ function BottomTabs() {
 }
 
 // Main Stack Navigator
-export default function StackNavigator() {
+export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={BottomTabs} />
-        <Stack.Screen name="Address" component={AddressScreen} />
-        <Stack.Screen name="Confirm" component={ConfirmationScreen} />
-        <Stack.Screen name="Order" component={OrderScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

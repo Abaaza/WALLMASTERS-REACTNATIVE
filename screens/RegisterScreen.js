@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   Alert,
   Image,
@@ -7,218 +8,128 @@ import {
   Text,
   TextInput,
   View,
+  SafeAreaView,
 } from "react-native";
-import React, { useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialIcons } from "@expo/vector-icons";
-import { AntDesign } from "@expo/vector-icons";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, AntDesign, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 const RegisterScreen = () => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-
   const navigation = useNavigation();
 
-  const handleRegister = () => {
-    const user = {
-      name: name,
-      email: email,
-      password: password,
-    };
+  // Helper function to validate email
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  const handleRegister = async () => {
+    console.log("Register button clicked");
+    console.log("Name:", name);
+    console.log("Email:", email);
 
-    // send a post request to the backend API
-    axios
-      .post(`http://locahost:3000/register`, user)
-      .then((response) => {
-        console.log(response);
-        Alert.alert(
-          "Registration Successfull",
-          "You have registered successfully"
-        );
-        setName("");
-        setEmail("");
-        setPassword("");
-      })
-      .catch((error) => {
-        Alert.alert(
-          "Registration Error",
-          "An error occured during registration"
-        );
-        setName("");
-        setEmail("");
-        setPassword("");
-        console.log("registration failed", error);
+    if (!name || !email || !password) {
+      Alert.alert("Input Error", "Please fill all fields.");
+      return;
+    }
+
+    console.log("Sending registration request...");
+
+    try {
+      const response = await axios.post("http://192.168.1.100:3000/register", {
+        name,
+        email,
+        password,
       });
+
+      console.log("Response from server:", response.data);
+
+      const { token, user } = response.data;
+
+      if (!token) {
+        console.log("No token received in the response.");
+        throw new Error("Token is missing from the response");
+      }
+
+      await AsyncStorage.setItem("authToken", token);
+      await AsyncStorage.setItem("userName", user.name);
+
+      Alert.alert(
+        "Registration Successful",
+        "You have registered successfully"
+      );
+      navigation.replace("Profile");
+    } catch (error) {
+      console.error("Registration failed", error);
+
+      if (error.response) {
+        Alert.alert("Registration Error", error.response.data.message);
+      } else if (error.request) {
+        Alert.alert("Network Error", "No response from the server.");
+      } else {
+        Alert.alert("Error", "An unexpected error occurred.");
+      }
+    }
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#fff", alignItems: "center" }}
-    >
-      <View style={{ marginTop: 20 }}>
+    <SafeAreaView style={styles.safeContainer}>
+      <View style={styles.logoContainer}>
         <Image
-          style={{ width: 150, height: 100 }}
-          source={{
-            uri: "https://assets.stickpng.com/thumbs/6160562276000b00045a7d97.png",
-          }}
+          style={styles.logo}
+          source={require("../assets/13.jpg")}
+          resizeMode="cover"
         />
       </View>
+      <KeyboardAvoidingView behavior="padding">
+        <Text style={styles.title}>Register to your Account</Text>
 
-      <KeyboardAvoidingView>
-        <View style={{ alignItems: "center" }}>
-          <Text
-            style={{
-              fontSize: 17,
-              fontWeight: "bold",
-              marginTop: 12,
-              color: "#041E42",
-            }}
-          >
-            Register to your Account
-          </Text>
-        </View>
-
-        <View style={{ marginTop: 70 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              backgroundColor: "#D0D0D0",
-              paddingVertical: 5,
-              borderRadius: 5,
-              marginTop: 30,
-            }}
-          >
-            <Ionicons
-              name="ios-person"
-              size={24}
-              color="gray"
-              style={{ marginLeft: 8 }}
-            />
-            <TextInput
-              value={name}
-              onChangeText={(text) => setName(text)}
-              style={{
-                color: "gray",
-                marginVertical: 10,
-                width: 300,
-                fontSize: name ? 16 : 16,
-              }}
-              placeholder="enter your Name"
-            />
-          </View>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              backgroundColor: "#D0D0D0",
-              paddingVertical: 5,
-              borderRadius: 5,
-              marginTop: 30,
-            }}
-          >
-            <AntDesign
-              name="lock1"
-              size={24}
-              color="gray"
-              style={{ marginLeft: 8 }}
-            />
-            <TextInput
-              value={email}
-              onChangeText={(text) => setEmail(text)}
-              style={{
-                color: "gray",
-                marginVertical: 10,
-                width: 300,
-                fontSize: email ? 16 : 16,
-              }}
-              placeholder="enter your Email"
-            />
-          </View>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            backgroundColor: "#D0D0D0",
-            paddingVertical: 5,
-            borderRadius: 5,
-            marginTop: 30,
-          }}
-        >
-          <MaterialIcons
-            name="email"
-            size={24}
-            color="gray"
-            style={{ marginLeft: 8 }}
+        <View style={styles.inputContainer}>
+          <Ionicons name="ios-person" size={24} color="gray" />
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter your Name"
+            style={styles.input}
+            autoCapitalize="words"
           />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <MaterialIcons name="email" size={24} color="gray" />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter your Email"
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <AntDesign name="lock1" size={24} color="gray" />
           <TextInput
             value={password}
-            secureTextEntry={true}
-            onChangeText={(text) => setPassword(text)}
-            style={{
-              color: "gray",
-              marginVertical: 10,
-              width: 300,
-              fontSize: password ? 16 : 16,
-            }}
-            placeholder="enter your Password"
+            onChangeText={setPassword}
+            placeholder="Enter your Password"
+            secureTextEntry
+            style={styles.input}
+            autoCapitalize="none"
           />
         </View>
 
-        <View
-          style={{
-            flexDirection: "row",
-            marginTop: 12,
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text>Keep me logged in</Text>
-          <Text style={{ color: "#007FFF", fontWeight: "500" }}>
-            Forgot Password
-          </Text>
-        </View>
-
-        <View style={{ marginTop: 50 }} />
-
-        <Pressable
-          onPress={handleRegister}
-          style={{
-            width: 200,
-            backgroundColor: "#FEBE10",
-            borderRadius: 6,
-            marginLeft: "auto",
-            marginRight: "auto",
-            padding: 15,
-          }}
-        >
-          <Text
-            style={{
-              textAlign: "center",
-              color: "white",
-              fontSize: 16,
-              fontWeight: "bold",
-            }}
-          >
-            Register
-          </Text>
+        <Pressable onPress={handleRegister} style={styles.button}>
+          <Text style={styles.buttonText}>Register</Text>
         </Pressable>
 
-        <Pressable
-          style={{ marginTop: 15 }}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={{ textAlign: "center", color: "gray", fontSize: 16 }}>
-            Already have an account? Sign In
+        <Pressable onPress={() => navigation.navigate("Login")}>
+          <Text style={styles.linkText}>
+            Already have an account?{" "}
+            <Text style={styles.signUpButton}>Sign In</Text>
           </Text>
         </Pressable>
       </KeyboardAvoidingView>
@@ -228,4 +139,62 @@ const RegisterScreen = () => {
 
 export default RegisterScreen;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  safeContainer: {
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 12,
+    textAlign: "center",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#D0D0D0",
+    padding: 10,
+    marginVertical: 10,
+    borderRadius: 5,
+    width: "90%",
+  },
+  input: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  button: {
+    backgroundColor: "#ff6347",
+    padding: 10,
+    borderRadius: 8,
+    marginHorizontal: 0,
+    alignItems: "center",
+    marginVertical: 10,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  linkText: {
+    color: "gray",
+    marginBottom: "150%",
+    alignSelf: "center",
+    fontSize: 16,
+  },
+  logoContainer: {
+    width: "100%", // Full width of the container
+    alignItems: "center", // Centering the image
+    flex: 1,
+    marginBottom: 50,
+  },
+  logo: {
+    width: "100%", // Image takes 100% width
+    height: undefined, // Allow height to adjust automatically
+    aspectRatio: 10,
+  },
+  signUpButton: {
+    color: "blue",
+  },
+});

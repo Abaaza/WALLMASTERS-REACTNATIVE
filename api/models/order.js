@@ -1,71 +1,33 @@
+// models/order.js
 const mongoose = require("mongoose");
 
-const orderSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    require: false,
-  },
-  products: [
-    {
-      name: {
-        type: String,
-        required: true,
-      },
-      quantity: {
-        type: Number,
-        required: true,
-      },
-      price: {
-        type: Number,
-        required: true,
-      },
-      image: {
-        type: String,
-        required: true,
-      },
-    },
-  ],
-  totalPrice: {
-    type: Number,
-    required: true,
-  },
-  shippingAddress: {
-    name: {
-      type: String,
-      required: true,
-    },
-    mobileNo: {
-      type: String,
-      required: true,
-    },
-    houseNo: {
-      type: String,
-      required: true,
-    },
-    street: {
-      type: String,
-      required: true,
-    },
-    landmark: {
-      type: String,
-      required: true,
-    },
-    postalCode: {
-      type: String,
-      required: true,
-    },
-  },
-  paymentMethod: {
-    type: String,
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
+const productSchema = new mongoose.Schema({
+  productId: { type: String, required: true },
+  name: { type: String, required: true },
+  size: { type: String },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+  image: { type: String },
 });
 
-const Order = mongoose.model("Order", orderSchema);
+const shippingAddressSchema = new mongoose.Schema({
+  houseNo: { type: String, required: true },
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  mobileNo: { type: String, required: true },
+  name: { type: String, required: true },
+});
 
-module.exports = Order;
+const orderSchema = new mongoose.Schema(
+  {
+    orderId: { type: String, required: true, unique: true }, // Add orderId
+    user: { type: String, required: true }, // Store userId as a string
+    products: [productSchema],
+    totalPrice: { type: Number, required: true },
+    shippingAddress: { type: shippingAddressSchema, required: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Order", orderSchema);

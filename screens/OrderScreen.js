@@ -1,45 +1,39 @@
+import React, { useEffect, useState } from "react";
 import {
-  StyleSheet,
-  Text,
   View,
+  Text,
+  StyleSheet,
   Image,
   ScrollView,
   Pressable,
+  SafeAreaView,
 } from "react-native";
-import React, { useEffect, useState } from "react";
-import { useNavigation } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
+import { useNavigation, useRoute } from "@react-navigation/native"; // Import useRoute
 import { useDispatch, useSelector } from "react-redux";
-import { cleanCart } from "../redux/CartReducer"; // Clean cart action
+import { cleanCart } from "../redux/CartReducer";
 
 const OrderScreen = () => {
   const navigation = useNavigation();
-  const [orderNumber, setOrderNumber] = useState("");
-  const cart = useSelector((state) => state.cart.cart);
+  const route = useRoute(); // Access route to get params
   const dispatch = useDispatch();
 
-  const total = cart
-    ?.map((item) => item.price * item.quantity)
-    .reduce((curr, prev) => curr + prev, 0);
+  const { orderId, shippingCost, total, subtotal } = route.params || {}; // Get order data from navigation params
+  const cart = useSelector((state) => state.cart.cart);
 
   useEffect(() => {
-    const generateOrderNumber = () => {
-      const randomNumber = Math.floor(Math.random() * 1000000) + 100000;
-      setOrderNumber(`ORD-${randomNumber}`);
-    };
-    generateOrderNumber();
+    const timer = setTimeout(handleClose, 10000); // Close after 10 seconds
+    return () => clearTimeout(timer); // Cleanup on unmount
   }, []);
 
   const handleClose = () => {
-    dispatch(cleanCart()); // Clear the cart on close
-    navigation.replace("Main"); // Navigate back to Main
+    dispatch(cleanCart()); // Clear the cart
+    navigation.replace("Main"); // Navigate back to the main screen
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Success Animation */}
         <LottieView
           source={require("../assets/thumbs.json")}
           style={styles.thumbsAnimation}
@@ -51,16 +45,16 @@ const OrderScreen = () => {
           Your Order Has Been Received!
         </Text>
 
-        {/* Order Details Section */}
         <View style={styles.orderDetailsContainer}>
-          <Text style={styles.orderNumberText}>
-            Order Number: {orderNumber}
+          <Text style={styles.orderNumberText}>Order Number: {orderId}</Text>
+          <Text style={styles.totalText}>Subtotal: {subtotal} EGP</Text>
+          <Text style={styles.totalText}>
+            Shipping: {subtotal > 2000 ? "Free" : `${shippingCost} EGP`}
           </Text>
           <Text style={styles.totalText}>Total: {total} EGP</Text>
           <Text style={styles.itemCountText}>Items: {cart.length}</Text>
         </View>
 
-        {/* Display Ordered Items */}
         <View style={styles.itemsContainer}>
           {cart.map((item, index) => (
             <View key={`${item.id}-${index}`} style={styles.item}>
@@ -70,15 +64,14 @@ const OrderScreen = () => {
               />
               <View style={styles.itemDetails}>
                 <Text style={styles.itemTitle}>{item.name}</Text>
-                <Text style={styles.itemVariant}>Size: {item.size}</Text>
+                <Text>Size: {item.size}</Text>
+                <Text>Quantity: {item.quantity}</Text>
                 <Text style={styles.itemPrice}>Price: {item.price} EGP</Text>
-                <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
               </View>
             </View>
           ))}
         </View>
 
-        {/* Sparkle Animation */}
         <LottieView
           source={require("../assets/sparkle.json")}
           style={styles.sparkleAnimation}
@@ -88,7 +81,6 @@ const OrderScreen = () => {
         />
       </ScrollView>
 
-      {/* Fixed Close Button */}
       <View style={styles.fixedButtonContainer}>
         <Pressable onPress={handleClose} style={styles.closeButton}>
           <Text style={styles.buttonText}>Close</Text>
@@ -107,13 +99,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Ensure space for the fixed button
+    paddingBottom: 10,
   },
   thumbsAnimation: {
-    height: 250,
-    width: 300,
+    height: 150,
+    width: 150,
     alignSelf: "center",
-    marginTop: 30,
+    marginTop: 10,
   },
   orderReceivedText: {
     fontSize: 22,
@@ -140,7 +132,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginVertical: 5,
-    color: "#FF6F00",
+    color: "#ff6347",
   },
   itemCountText: {
     fontSize: 16,
@@ -175,20 +167,11 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     color: "#333",
   },
-  itemVariant: {
-    fontSize: 14,
-    color: "#888",
-    marginBottom: 2,
-  },
   itemPrice: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#FF6F00",
+    color: "#ff6347",
     marginBottom: 2,
-  },
-  itemQuantity: {
-    fontSize: 14,
-    color: "#333",
   },
   sparkleAnimation: {
     height: 200,
@@ -208,13 +191,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   closeButton: {
-    backgroundColor: "#FFC72C",
-    padding: 15,
+    backgroundColor: "#ff6347",
+    padding: 10,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 15,
   },
   buttonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#fff",
   },

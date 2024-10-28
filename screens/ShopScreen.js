@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
-import ProductItemWM from "./ProductItemWM";
+import ProductItemWM from "../components/ProductItemWM";
 import WMProducts from "../assets/WMProducts";
 import { AntDesign } from "@expo/vector-icons";
 
@@ -97,13 +97,13 @@ const ShopScreen = ({ route }) => {
           resizeMode="cover"
         ></Image>
       </View>
-      {/* Search Bar */}
+      {/* Search Bar
       <View style={styles.searchBar}>
         <Pressable style={styles.searchInput}>
           <AntDesign name="search1" size={22} color="black" />
           <TextInput placeholder="Search Products" style={{ flex: 1 }} />
         </Pressable>
-      </View>
+      </View> */}
 
       <ModalSelector
         data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
     width: "100%", // Full width of the container
     alignItems: "center", // Centering the image
     flex: 1,
+    marginBottom: 10,
   },
   logo: {
     width: "100%", // Image takes 100% width

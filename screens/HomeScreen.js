@@ -18,7 +18,7 @@ import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import WMProducts from "../assets/WMProducts";
-import ProductItemWM from "./ProductItemWM";
+import ProductItemWM from "../components/ProductItemWM";
 import { SliderBox } from "react-native-image-slider-box";
 
 const HomeScreen = () => {
