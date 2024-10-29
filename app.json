@@ -1,36 +1,21 @@
 {
   "expo": {
     "name": "Wallmasters",
-    "slug": "Wallmasters",
+    "slug": "ecommerce-project",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
+    "sdkVersion": "49.0.0",
+    "platforms": [
+      "android",
+      "ios"
     ],
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "host.exp.exponent"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+      "package": "com.wallmasters.app"
     },
     "extra": {
       "eas": {
         "projectId": "521cd4e7-b34b-4486-8be6-a5b82d662968"
       }
-    }
+    },
+    "owner": "abaza90"
   }
 }
