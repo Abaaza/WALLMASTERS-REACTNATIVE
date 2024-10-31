@@ -12,6 +12,11 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
+// Address validation schema (Simple validation)
+const validateAddress = (address) => {
+  return Object.values(address).every((field) => field !== "");
+};
+
 const AddressScreen = () => {
   const navigation = useNavigation();
   const [name, setName] = useState("");
@@ -20,7 +25,10 @@ const AddressScreen = () => {
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [isAddressLoaded, setIsAddressLoaded] = useState(false); // Track if address was loaded
+  const [isAddressLoaded, setIsAddressLoaded] = useState(false);
+
+  const country = "Egypt"; // Non-editable country
+  const paymentMethod = "Cash on Delivery"; // Non-editable payment method
 
   useEffect(() => {
     loadSavedAddress();
@@ -29,16 +37,14 @@ const AddressScreen = () => {
   const loadSavedAddress = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      if (!userId) {
-        return;
-      }
+      if (!userId) return;
 
       const response = await axios.get(
-        `http://192.168.1.100:3000/addresses/${userId}`
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
       );
 
       if (response.data && response.data.length > 0) {
-        const address = response.data[0]; // Assuming only one saved address
+        const address = response.data[0];
 
         setName(address.name);
         setMobileNo(address.mobileNo);
@@ -46,7 +52,7 @@ const AddressScreen = () => {
         setStreet(address.street);
         setCity(address.city);
         setPostalCode(address.postalCode);
-        setIsAddressLoaded(true); // Mark address as loaded
+        setIsAddressLoaded(true);
       }
     } catch (error) {
       console.error("Error loading address:", error);
@@ -56,35 +62,54 @@ const AddressScreen = () => {
   const handleSaveAddress = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      const address = { name, mobileNo, houseNo, street, city, postalCode };
+      const address = {
+        name,
+        mobileNo,
+        houseNo,
+        street,
+        city,
+        postalCode,
+        country,
+      };
+
+      if (!validateAddress(address)) {
+        Alert.alert("Error", "Please fill all the required fields.");
+        return;
+      }
 
       console.log("Saving address:", address);
 
       const response = await axios.post(
-        `http://192.168.1.100:3000/addresses/${userId}`,
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`,
         { address }
       );
 
       console.log("Address saved successfully:", response.data);
-      navigation.navigate("Order Summary", { address });
+      navigation.navigate("Order Summary", { address, paymentMethod });
     } catch (error) {
       console.error("Error saving address:", error);
     }
   };
 
   const handleProceedToConfirm = () => {
-    const address = { name, mobileNo, houseNo, street, city, postalCode };
+    const address = {
+      name,
+      mobileNo,
+      houseNo,
+      street,
+      city,
+      postalCode,
+      country,
+    };
 
-    if (Object.values(address).some((field) => field === "")) {
-      Alert.alert("Error", "Please fill all fields.");
+    if (!validateAddress(address)) {
+      Alert.alert("Error", "Please fill all the required fields.");
       return;
     }
 
     if (isAddressLoaded) {
-      // If address is already loaded, proceed to checkout with the existing one
-      navigation.navigate("Order Summary", { address });
+      navigation.navigate("Order Summary", { address, paymentMethod });
     } else {
-      // Otherwise, save the new address and proceed
       handleSaveAddress();
     }
   };
@@ -130,6 +155,29 @@ const AddressScreen = () => {
         style={styles.input}
       />
 
+      {/* Non-editable fields styled like inputs */}
+      <Text style={styles.text}>Country:</Text>
+      <TextInput
+        value={country}
+        editable={false}
+        placeholder="Country"
+        style={styles.input}
+      />
+      <Text style={styles.text}>Payment Method:</Text>
+      <TextInput
+        value={paymentMethod}
+        editable={false}
+        placeholder="Payment Method"
+        style={styles.input}
+      />
+      <Text style={styles.text}>Shipping Time: </Text>
+      <TextInput
+        value="6 Business Days"
+        editable={false}
+        placeholder="Shipping Duration"
+        style={styles.input}
+      />
+
       <Pressable onPress={handleProceedToConfirm} style={styles.proceedButton}>
         <Text style={styles.buttonText}>
           {isAddressLoaded ? "Proceed to Checkout" : "Save and Proceed"}
@@ -149,6 +197,9 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
+    backgroundColor: "#f0f0f0", // Optional: Different background for non-editables
+    color: "#000", // Optional: Slightly dim text for non-editables
+    fontSize: 16,
   },
   proceedButton: {
     backgroundColor: "#ff6347",
@@ -156,8 +207,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 10,
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 30,
     marginTop: 15,
   },
   buttonText: { fontSize: 16, fontWeight: "bold", color: "#fff" },
+  text: { paddingVertical: 3 },
 });

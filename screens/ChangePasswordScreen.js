@@ -40,7 +40,7 @@ const ChangePasswordScreen = () => {
 
     try {
       const response = await axios.post(
-        "http://192.168.1.100:3000/change-password",
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/change-password",
         {
           email,
           oldPassword,

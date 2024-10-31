@@ -7,35 +7,70 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   ActivityIndicator,
   TouchableOpacity,
   Dimensions,
+  FlatList,
 } from "react-native";
-import { AntDesign } from "@expo/vector-icons";
+
 import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
-import WMProducts from "../assets/WMProducts";
 import ProductItemWM from "../components/ProductItemWM";
 import { SliderBox } from "react-native-image-slider-box";
 
 const HomeScreen = () => {
-  const uniqueThemes = useMemo(
-    () => [...new Set(WMProducts.map((product) => product.theme))],
-    []
-  );
-
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [randomDeals, setRandomDeals] = useState([]);
   const [theme, setTheme] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState(WMProducts);
+  const [filteredProducts, setFilteredProducts] = useState(products);
 
   const screenWidth = Dimensions.get("window").width;
+  const scrollViewRef = useRef(null);
+  const cart = useSelector((state) => state.cart.cart);
+  const navigation = useNavigation();
 
-  const scrollViewRef = useRef(null); // Create a reference for the ScrollView
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+      );
+      const data = await response.json();
+      setProducts(data);
+      setRandomDeals(getRandomDeals(data));
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Function to scroll to the top
+  const getRandomDeals = (products) => {
+    const shuffled = [...products].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    if (theme) {
+      setFilteredProducts(
+        products.filter((product) => product.theme === theme)
+      );
+    } else {
+      setFilteredProducts(products);
+    }
+  }, [theme, products]);
+
+  const uniqueThemes = useMemo(
+    () => [...new Set(products.map((product) => product.theme))],
+    [products]
+  );
+
   const scrollToTop = () => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
@@ -54,30 +89,9 @@ const HomeScreen = () => {
     require("../assets/11.jpg"),
   ];
 
-  const cart = useSelector((state) => state.cart.cart);
-  const navigation = useNavigation();
-
-  // Get random deals for display
-  const getRandomDeals = () => {
-    const shuffled = [...WMProducts].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 6);
-  };
-
-  useEffect(() => {
-    const deals = getRandomDeals();
-    setRandomDeals(deals);
-  }, []);
-
-  useEffect(() => {
-    // Filter products by theme
-    if (theme) {
-      setFilteredProducts(
-        WMProducts.filter((product) => product.theme === theme)
-      );
-    } else {
-      setFilteredProducts(WMProducts);
-    }
-  }, [theme]);
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
 
   if (!randomDeals.length) {
     return (
@@ -86,6 +100,54 @@ const HomeScreen = () => {
       </View>
     );
   }
+  const renderProductItem = ({ item }) => (
+    <ProductItemWM
+      key={item.id}
+      item={item}
+      onPress={() =>
+        navigation.navigate("ShopStack", {
+          screen: "ProductInfo",
+          params: {
+            id: item.id,
+            title: item.name,
+            price: item.variants[0].price,
+            carouselImages: item.images,
+            color: item.color,
+            size: item.variants[0].size,
+            item,
+          },
+        })
+      }
+    />
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+  const renderItem = ({ item }) => (
+    <ProductItemWM
+      key={item.id}
+      item={item}
+      onPress={() =>
+        navigation.navigate("ProductInfo", {
+          id: item.id,
+          title: item.name,
+          priceRange: {
+            min: item.variants[0].price,
+            max: item.variants[item.variants.length - 1].price,
+          },
+          carouselImages: item.images,
+          color: item.color,
+          size: item.variants[0].size,
+          item, // Pass the entire item object
+        })
+      }
+    />
+  );
 
   return (
     <ScrollView style={styles.container}>
@@ -102,43 +164,34 @@ const HomeScreen = () => {
       <View style={styles.sliderContainer}>
         <SliderBox
           images={sliderImages}
-          autoPlay
-          circleLoop
+          autoplay={true} // Ensure autoplay is explicitly set to true
+          circleLoop={true} // Enable continuous looping
+          sliderBoxHeight={200} // Set a height for the slider
           dotColor="#000"
           inactiveDotColor="#fff"
+          paginationBoxVerticalPadding={10}
           resizeMethod="resize"
-          ImageComponentStyle={styles.sliderImage} // Apply aspect ratio
+          ImageComponentStyle={styles.sliderImage}
+          autoplayInterval={3000} // Set the interval for autoplay (in milliseconds)
+          onCurrentImagePressed={(index) =>
+            console.log(`Image ${index + 1} pressed`)
+          }
         />
       </View>
 
       {/* Trending Deals */}
       <Text style={styles.sectionTitle}>Trending Frames</Text>
-      <View style={styles.productsContainer}>
-        {randomDeals.map((item) => (
-          <ProductItemWM
-            key={item.id}
-            item={item}
-            onPress={() => {
-              navigation.navigate("ShopStack", {
-                screen: "ProductInfo", // Navigate to ProductInfo inside ShopStack
-                params: {
-                  id: item.id,
-                  title: item.name,
-                  price: item.variants[0].price,
-                  carouselImages: item.images,
-                  color: item.color,
-                  size: item.variants[0].size,
-                  item, // Pass the entire item object
-                },
-              });
-            }}
-          />
-        ))}
-      </View>
+      <FlatList
+        data={randomDeals}
+        renderItem={renderProductItem}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        contentContainerStyle={styles.listContent}
+      />
 
       <Text style={styles.sectionTitle}>Today's Offers</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {WMProducts.slice(0, 10).map((item, index) => (
+        {products.slice(0, 10).map((item, index) => (
           <Pressable
             key={`${item.id}-${index}`}
             style={styles.productItem}
@@ -191,29 +244,13 @@ const HomeScreen = () => {
       </ModalSelector>
 
       {/* Filtered Products Based on Theme */}
-      <View style={styles.productsContainer}>
-        {filteredProducts.slice(0, 4).map((item) => (
-          <ProductItemWM
-            key={item.id}
-            item={item}
-            onPress={() => {
-              navigation.navigate("ProductInfo", {
-                // Navigate directly to ProductInfo screen
-                id: item.id,
-                title: item.name,
-                priceRange: {
-                  min: item.variants[0].price,
-                  max: item.variants[item.variants.length - 1].price,
-                },
-                carouselImages: item.images,
-                color: item.color,
-                size: item.variants[0].size,
-                item, // Pass the entire item object
-              });
-            }}
-          />
-        ))}
-      </View>
+      <FlatList
+        data={filteredProducts.slice(0, 4)} // Limit to first 4 products
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        contentContainerStyle={styles.listContent}
+      />
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -352,5 +389,10 @@ const styles = StyleSheet.create({
     width: "100%", // Image takes 100% width
     height: undefined, // Allow height to adjust automatically
     aspectRatio: 10,
+  },
+  listContent: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 20,
   },
 });

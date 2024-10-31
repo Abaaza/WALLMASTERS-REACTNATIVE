@@ -1,30 +1,32 @@
 const express = require("express");
+const cors = require("cors");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
-
 require("dotenv").config();
+console.log("CONNECTION_STRING:", process.env.CONNECTION_STRING);
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
+const jwt = require("jsonwebtoken");
 
 const User = require("./models/user");
 const Order = require("./models/order");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Use the Heroku port or fallback to 3000
 
-// ------------------ MIDDLEWARE ------------------
+// Middleware
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-// ------------------ DATABASE CONNECTION ------------------
+// Database connection
+const mongoURI = process.env.CONNECTION_STRING;
 mongoose
-  .connect(process.env.CONNECTION_STRING, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1); // Exit if DB connection fails
+  });
 
 // ------------------ UTILITIES ------------------
 const generateOrderId = () => {
@@ -33,7 +35,50 @@ const generateOrderId = () => {
   return `ORD-${datePart}-${randomPart}`;
 };
 
+// Define Product schema and model
+const productSchema = new mongoose.Schema({}, { collection: "products" });
+const Product = mongoose.model("Product", productSchema);
+
 // ------------------ ROUTES ------------------
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user || user.password !== password) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: { _id: user._id, name: user.name, email: user.email },
+      token,
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Login failed", error });
+  }
+});
+
+app.get("/", (req, res) => {
+  res.send("Hello from Wallmasters Backend!");
+});
+
+// Sample API: Fetch all products
+app.get("/products", async (req, res) => {
+  try {
+    const products = await Product.find();
+    res.json(products);
+  } catch (error) {
+    res.status(500).send("Error fetching products.");
+  }
+});
+
+// ------------------ SERVER ------------------
 
 // Register Route
 app.post("/register", async (req, res) => {
@@ -66,29 +111,6 @@ app.post("/register", async (req, res) => {
 });
 
 // Login Route
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user || user.password !== password) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-
-    res.status(200).json({
-      message: "Login successful",
-      user: { _id: user._id, name: user.name, email: user.email },
-      token,
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Login failed", error });
-  }
-});
 
 // Change Password Route
 app.post("/change-password", async (req, res) => {
@@ -173,9 +195,6 @@ app.post("/change-password", async (req, res) => {
 });
 
 // ------------------ SERVER START ------------------
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
 
 app.post("/addresses/:userId", async (req, res) => {
   try {
@@ -317,4 +336,8 @@ app.delete("/saved-items/:userId/:productId", async (req, res) => {
     console.error("Error deleting saved item:", error);
     res.status(500).json({ message: "Failed to delete saved item." });
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   View,
   ScrollView,
@@ -6,55 +6,38 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
-  Platform,
-  TextInput,
+  FlatList,
   Image,
-  Pressable,
 } from "react-native";
 import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
 import ProductItemWM from "../components/ProductItemWM";
-import WMProducts from "../assets/WMProducts";
-import { AntDesign } from "@expo/vector-icons";
 
 const ShopScreen = ({ route }) => {
   const navigation = useNavigation();
   const initialTheme = route?.params?.theme || "";
 
-  const [products, setProducts] = useState(WMProducts);
-  const [visibleProducts, setVisibleProducts] = useState(14);
+  // State and refs
+  const scrollViewRef = useRef(null);
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [visibleProducts, setVisibleProducts] = useState(14);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedTheme, setSelectedTheme] = useState(initialTheme);
   const [selectedThreePiece, setSelectedThreePiece] = useState(null);
 
-  const uniqueThemes = useMemo(() => {
-    const themes = WMProducts.map((product) => product.theme);
-    return Array.from(new Set(themes));
-  }, []);
-
-  const uniqueColors = useMemo(() => {
-    const colors = WMProducts.flatMap((product) => product.color);
-    return Array.from(new Set(colors));
-  }, []);
-
+  // Fetch products from the API
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const filteredProducts = WMProducts.filter(
-          (product) =>
-            (!selectedColor ||
-              product.color.some((color) =>
-                color.toLowerCase().includes(selectedColor.toLowerCase())
-              )) &&
-            (!selectedTheme ||
-              product.theme.toLowerCase() === selectedTheme.toLowerCase()) &&
-            (selectedThreePiece === null ||
-              product.threePiece.toLowerCase() === selectedThreePiece)
+        const response = await fetch(
+          "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
         );
-        setProducts(filteredProducts);
+        const data = await response.json();
+        setProducts(data);
+        setFilteredProducts(data);
       } catch (error) {
         console.error("Failed to load products:", error);
       } finally {
@@ -63,15 +46,48 @@ const ShopScreen = ({ route }) => {
     };
 
     fetchProducts();
-  }, [selectedColor, selectedTheme, selectedThreePiece]);
+  }, []);
 
+  // Apply filters
+  useEffect(() => {
+    const applyFilters = () => {
+      const filtered = products.filter(
+        (product) =>
+          (!selectedColor ||
+            product.color.some((color) =>
+              color.toLowerCase().includes(selectedColor.toLowerCase())
+            )) &&
+          (!selectedTheme ||
+            product.theme.toLowerCase() === selectedTheme.toLowerCase()) &&
+          (selectedThreePiece === null ||
+            product.threePiece.toString().toLowerCase() === selectedThreePiece)
+      );
+      setFilteredProducts(filtered);
+    };
+
+    applyFilters();
+  }, [selectedColor, selectedTheme, selectedThreePiece, products]);
+
+  // useMemo for unique themes and colors
+  const uniqueThemes = useMemo(() => {
+    const themes = products.map((product) => product.theme);
+    return Array.from(new Set(themes));
+  }, [products]);
+
+  const uniqueColors = useMemo(() => {
+    const colors = products.flatMap((product) => product.color);
+    return Array.from(new Set(colors));
+  }, [products]);
+
+  // Reset filters
   const resetFilters = () => {
     setSelectedColor("");
     setSelectedTheme("");
     setSelectedThreePiece(null);
-    setProducts(WMProducts);
+    setFilteredProducts(products);
   };
 
+  // Render loading state
   if (loading) {
     return (
       <View style={styles.errorContainer}>
@@ -80,31 +96,48 @@ const ShopScreen = ({ route }) => {
     );
   }
 
-  if (products.length === 0) {
+  // Render empty state
+  if (filteredProducts.length === 0) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>No products available.</Text>
       </View>
     );
   }
+  const renderItem = ({ item }) => (
+    <ProductItemWM
+      key={item.id}
+      item={item}
+      onPress={() =>
+        navigation.navigate("ProductInfo", {
+          id: item.id,
+          title: item.name,
+          priceRange: {
+            min: item.variants[0]?.price,
+            max: item.variants[item.variants.length - 1]?.price,
+          },
+          carouselImages: item.images,
+          color: item.color,
+          size: item.variants[0]?.size,
+          item, // Pass the entire item object for deeper navigation
+        })
+      }
+    />
+  );
 
+  // Render content
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} ref={scrollViewRef}>
+      {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
           style={styles.logo}
           source={require("../assets/13.jpg")}
           resizeMode="cover"
-        ></Image>
+        />
       </View>
-      {/* Search Bar
-      <View style={styles.searchBar}>
-        <Pressable style={styles.searchInput}>
-          <AntDesign name="search1" size={22} color="black" />
-          <TextInput placeholder="Search Products" style={{ flex: 1 }} />
-        </Pressable>
-      </View> */}
 
+      {/* Theme Selector */}
       <ModalSelector
         data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
         initValue="Select Theme"
@@ -117,6 +150,7 @@ const ShopScreen = ({ route }) => {
         </Text>
       </ModalSelector>
 
+      {/* Color Selector */}
       <ModalSelector
         data={uniqueColors.map((color) => ({ key: color, label: color }))}
         initValue="Select Color"
@@ -129,6 +163,7 @@ const ShopScreen = ({ route }) => {
         </Text>
       </ModalSelector>
 
+      {/* Three-Piece Selector */}
       <ModalSelector
         data={[
           { key: "yes", label: "3 Pieces" },
@@ -143,40 +178,27 @@ const ShopScreen = ({ route }) => {
           {selectedThreePiece === null
             ? "Number of pieces"
             : selectedThreePiece === "yes"
-            ? "Yes"
-            : "No"}
+            ? "3 Pieces"
+            : "One Piece"}
         </Text>
       </ModalSelector>
 
+      {/* Reset Filters Button */}
       <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
         <Text style={styles.resetButtonText}>Reset Filters</Text>
       </TouchableOpacity>
 
-      <View style={styles.productsContainer}>
-        {products.slice(0, visibleProducts).map((item) => (
-          <ProductItemWM
-            key={item.id}
-            item={item}
-            onPress={() =>
-              navigation.navigate("ProductInfo", {
-                // Navigate directly to ProductInfo inside ShopStackNavigator
-                id: item.id,
-                title: item.name,
-                priceRange: {
-                  min: item.variants[0].price,
-                  max: item.variants[item.variants.length - 1].price,
-                },
-                carouselImages: item.images,
-                color: item.color,
-                size: item.variants[0].size,
-                item, // Pass the entire item object
-              })
-            }
-          />
-        ))}
-      </View>
+      {/* Products List */}
+      <FlatList
+        data={filteredProducts.slice(0, visibleProducts)} // Limit to visible products
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
+        contentContainerStyle={styles.listContent}
+      />
 
-      {visibleProducts < products.length && (
+      {/* Load More Button */}
+      {visibleProducts < filteredProducts.length && (
         <TouchableOpacity
           onPress={() => setVisibleProducts((prev) => prev + 14)}
           style={styles.loadMoreBtn}
@@ -187,8 +209,6 @@ const ShopScreen = ({ route }) => {
     </ScrollView>
   );
 };
-
-export default ShopScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -282,4 +302,12 @@ const styles = StyleSheet.create({
     height: undefined, // Allow height to adjust automatically
     aspectRatio: 10,
   },
+  listContent: {
+    justifyContent: "center", // Center the content horizontally
+    alignItems: "center",
+    paddingVertical: 10, // Add vertical padding
+    paddingBottom: 20, // Add bottom padding
+  },
 });
+
+export default ShopScreen;

@@ -14,14 +14,39 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../redux/CartReducer";
 import DropDownPicker from "react-native-dropdown-picker";
-import WMProducts from "../assets/WMProducts";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 const ProductInfoScreen = () => {
+  const [products, setProducts] = useState([]);
   const route = useRoute();
   const navigation = useNavigation();
   const dispatch = useDispatch();
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+      );
+      const data = await response.json();
+      setProducts(data);
+      setRandomDeals(getRandomDeals(data));
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRandomDeals = (products) => {
+    const shuffled = [...products].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 6);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   // Safely access route params
   const {
@@ -72,7 +97,7 @@ const ProductInfoScreen = () => {
       }
 
       const response = await axios.get(
-        `http://192.168.1.100:3000/saved-items/${userId}`,
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/saved-items/${userId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -110,7 +135,7 @@ const ProductInfoScreen = () => {
       console.log("Saving product:", productToSave); // Debugging
 
       const response = await axios.post(
-        `http://192.168.1.100:3000/save-for-later/${userId}`,
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/save-for-later/${userId}`,
         { product: productToSave },
         {
           headers: {
@@ -143,10 +168,12 @@ const ProductInfoScreen = () => {
     dispatch(addToCart(productToAdd));
     setTimeout(() => setAddedToCart(false), 60000);
   };
-
   const scrollToImage = (index) => {
-    setActiveIndex(index);
-    imageScrollRef.current?.scrollTo({ x: index * width, animated: true });
+    imageScrollRef.current?.scrollTo({
+      x: index * width,
+      animated: true, // Ensure smooth animation
+    });
+    setActiveIndex(index); // Update active index after scroll
   };
 
   const scrollToTop = () => {
@@ -164,7 +191,7 @@ const ProductInfoScreen = () => {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onScroll={(event) => {
+          onMomentumScrollEnd={(event) => {
             const newIndex = Math.round(
               event.nativeEvent.contentOffset.x / width
             );
@@ -172,32 +199,34 @@ const ProductInfoScreen = () => {
           }}
           scrollEventThrottle={16}
         >
-          {route.params.carouselImages.map((image, index) => (
-            <ImageBackground
-              key={index}
-              source={{ uri: image }}
-              style={{ width, height }}
-              resizeMode="contain"
-            />
+          {carouselImages.map((image, index) => (
+            <View key={index} style={{ width, height, position: "relative" }}>
+              {/* Image */}
+              <ImageBackground
+                source={{ uri: image }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="contain"
+              >
+                {/* Save for Later Button */}
+                <Pressable
+                  onPress={() => saveForLater(item)}
+                  style={[styles.saveButton, isSaved && styles.savedButton]}
+                  disabled={isSaved}
+                >
+                  <Text style={styles.saveButtonText}>
+                    {isSaved ? "Saved" : "Save for later"}
+                  </Text>
+                </Pressable>
+              </ImageBackground>
+            </View>
           ))}
         </ScrollView>
-        <View style={styles.fixedButtonContainer2}>
-          <View style={styles.container}>
-            <Pressable
-              onPress={() => saveForLater(item)}
-              style={[styles.saveButton, isSaved && styles.savedButton]}
-              disabled={isSaved} // Disable button when item is saved
-            >
-              <Text style={styles.saveButtonText}>
-                {isSaved ? "Saved" : "Save for Later"}
-              </Text>
-            </Pressable>
 
-            {/* Other UI elements */}
-          </View>
-        </View>
-
-        <View style={styles.thumbnailContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.thumbnailScrollContent}
+        >
           {route.params.carouselImages.map((image, index) => (
             <Pressable key={index} onPress={() => scrollToImage(index)}>
               <Image
@@ -209,7 +238,7 @@ const ProductInfoScreen = () => {
               />
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
 
         <View style={styles.dropdownContainer}>
           <Text style={styles.label}>Select Size:</Text>
@@ -284,27 +313,23 @@ const ProductInfoScreen = () => {
 
         <Text style={styles.sectionTitle}>Today's Offers</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {WMProducts.slice(0, 10).map((item, index) => (
+          {products.slice(0, 10).map((item, index) => (
             <Pressable
               key={`${item.id}-${index}`}
               style={styles.productItem}
               onPress={() => {
-                navigation.navigate("ShopStack", {
-                  screen: "ProductInfo", // Target ProductInfo inside ShopStack
-                  params: {
-                    id: item.id,
-                    title: item.name,
-                    priceRange: {
-                      min: item.variants[0].price,
-                      max: item.variants[item.variants.length - 1].price,
-                    },
-                    carouselImages: item.images,
-                    color: item.color,
-                    size: item.variants[0].size,
-                    item,
+                navigation.navigate("ProductInfo", {
+                  id: item.id,
+                  title: item.name,
+                  priceRange: {
+                    min: item.variants[0].price,
+                    max: item.variants[item.variants.length - 1].price,
                   },
+                  carouselImages: item.images,
+                  color: item.color,
+                  size: item.variants[0].size,
+                  item, // Pass the entire item object
                 });
-
                 setTimeout(scrollToTop, 100); // Optional: Scroll to top after navigation
               }}
             >
@@ -345,19 +370,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: { paddingBottom: 80 },
 
-  activeThumbnail: { borderColor: "blue", borderWidth: 2 },
-
-  thumbnailContainer: {
-    flexDirection: "row",
-    marginBottom: 4,
-    paddingHorizontal: 10,
+  thumbnailScrollContent: {
+    flexDirection: "row", // Align thumbnails horizontally
+    alignItems: "center", // Center the thumbnails vertically
+    padding: 5,
   },
   thumbnailImage: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     marginRight: 10,
     borderRadius: 8,
-    alignItems: "flex-start",
+    borderColor: "#ddd",
+    borderWidth: 1,
+    transform: [{ scale: 1 }], // Default scale
+  },
+  activeThumbnail: {
+    borderColor: "blue",
+    borderWidth: 2,
+    transform: [{ scale: 1.1 }], // Scale effect for active thumbnail
   },
   productDetails: {
     padding: 10,
@@ -392,7 +422,7 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 18, // Larger text in the dropdown menu
-    fontWeight: "500",
+    fontWeight: "600",
   },
   deliveryInfo: {
     padding: 10,
@@ -406,12 +436,12 @@ const styles = StyleSheet.create({
     color: "#ff6347",
     fontSize: 17,
     marginVertical: 1,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   stockText: {
     color: "green",
 
-    fontWeight: "500",
+    fontWeight: "600",
     marginLeft: 1,
     marginVertical: 1,
   },
@@ -471,6 +501,7 @@ const styles = StyleSheet.create({
   },
   bulletPoint: {
     fontSize: 16,
+    fontWeight: "600",
     marginVertical: 4,
     lineHeight: 22,
     textAlign: "center",
@@ -547,29 +578,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  saveButton: {
-    alignItems: "center",
-    justifyContent: "center", // Center text inside the button
-    marginTop: 5,
-    marginRight: 7,
-
-    borderRadius: 0, // Optional: Rounded corners
-    borderWidth: 1, // Border width
-    borderColor: "#000", // Border color
-  },
-
   fixedButtonContainer2: {
     alignItems: "flex-end", // Align to the right side of the parent
   },
 
-  saveButtonText: {
-    color: "#000",
-    fontSize: 13, // Adjusted font size to fit inside the small square
-    fontWeight: "400",
-    textAlign: "center", // Center the text
-    padding: 2,
+  saveButton: {
+    position: "absolute",
+    bottom: 10, // Adjust as needed
+    right: 10, // Align to the right corner
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 15,
   },
   savedButton: {
-    backgroundColor: "#ff6347", // Green when saved
+    backgroundColor: "rgba(255, 99, 71, 0.8)", // Red background when saved
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
   },
 });

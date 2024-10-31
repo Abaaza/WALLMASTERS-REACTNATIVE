@@ -39,11 +39,14 @@ const RegisterScreen = () => {
     console.log("Sending registration request...");
 
     try {
-      const response = await axios.post("http://192.168.1.100:3000/register", {
-        name,
-        email,
-        password,
-      });
+      const response = await axios.post(
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/register",
+        {
+          name,
+          email,
+          password,
+        }
+      );
 
       console.log("Response from server:", response.data);
 

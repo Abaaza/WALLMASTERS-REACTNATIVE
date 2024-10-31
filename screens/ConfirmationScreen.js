@@ -46,7 +46,7 @@ const ConfirmationScreen = () => {
       console.log("Sending Order:", orderData);
 
       const response = await axios.post(
-        "http://192.168.1.100:3000/orders",
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/orders",
         orderData
       );
       console.log("Order placed successfully:", response.data);

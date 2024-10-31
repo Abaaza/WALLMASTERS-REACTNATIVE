@@ -1,21 +1,21 @@
 import React, { useState } from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Dimensions,
+} from "react-native";
 import { useDispatch } from "react-redux";
-import { addToCart } from "../redux/CartReducer";
+
+const { width } = Dimensions.get("window"); // Get the device's screen width
 
 const ProductItemWM = ({ item, onPress }) => {
-  const [addedToCart, setAddedToCart] = useState(false);
   const dispatch = useDispatch();
 
-  const addItemToCart = () => {
-    const productToAdd = { ...item, ...item.variants[0], quantity: 1 };
-    dispatch(addToCart(productToAdd));
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 60000);
-  };
-
   return (
-    <Pressable style={styles.container} onPress={onPress}>
+    <Pressable style={[styles.container]} onPress={onPress}>
       {/* Render the First Image Only */}
       {item.images.length > 0 && (
         <Image source={{ uri: item.images[0] }} style={styles.image} />
@@ -26,7 +26,7 @@ const ProductItemWM = ({ item, onPress }) => {
         {item.name}
       </Text>
 
-      {/* Product Price and Sizes in Vertical Stack */}
+      {/* Product Price and Sizes */}
       <View style={styles.detailsContainer}>
         <Text style={styles.priceRange}>
           {item.variants[0].price} -{" "}
@@ -44,9 +44,8 @@ export default ProductItemWM;
 
 const styles = StyleSheet.create({
   container: {
-    width: "47%", // Adjust width to fit 2 cards per row
-    height: undefined, // Make the card taller if needed
-    marginBottom: 15, // Add spacing between rows
+    width: width / 2 - 17, // Set container width dynamically (half screen width minus 30)
+    marginBottom: 15, // Spacing between rows
     marginHorizontal: 6,
     backgroundColor: "#fff",
     borderRadius: 10,
@@ -60,8 +59,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   image: {
-    width: "100%", // Adjust image width to fit inside the card with padding
-    aspectRatio: 1,
+    width: "100%", // Make the image fill the card width
+    aspectRatio: 1, // Maintain aspect ratio
     resizeMode: "contain",
   },
   title: {

@@ -21,7 +21,7 @@ const SavedAddressesScreen = ({ navigation }) => {
       }
 
       const response = await axios.get(
-        `http://192.168.1.100:3000/addresses/${userId}`
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
       );
 
       console.log("Address Response:", response.data); // Debugging Response
@@ -40,7 +40,9 @@ const SavedAddressesScreen = ({ navigation }) => {
   const deleteAddress = async (id) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      await axios.delete(`http://192.168.1.100:3000/addresses/${userId}`);
+      await axios.delete(
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
+      );
 
       // Update state after deletion
       setAddresses((prevAddresses) =>

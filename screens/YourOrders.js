@@ -57,7 +57,7 @@ const YourOrders = () => {
       console.log("User ID:", userId); // Debugging log
 
       const response = await axios.get(
-        `http://192.168.1.100:3000/orders/${userId}`
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/orders/${userId}`
       );
       console.log("Loaded Orders:", response.data); // Debugging log
       setOrders(response.data);

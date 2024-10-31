@@ -59,10 +59,13 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://192.168.1.100:3000/login", {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/login",
+        {
+          email,
+          password,
+        }
+      );
 
       console.log("Login Response:", response.data);
 

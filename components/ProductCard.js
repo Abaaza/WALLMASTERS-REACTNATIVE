@@ -7,10 +7,13 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const { width } = Dimensions.get("window"); // Get screen width
 
 const ProductCard = ({ item = {}, onRemove }) => {
   const navigation = useNavigation();
@@ -25,7 +28,7 @@ const ProductCard = ({ item = {}, onRemove }) => {
       }
 
       await axios.delete(
-        `http://192.168.1.100:3000/saved-items/${userId}/${item.productId}`,
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/saved-items/${userId}/${item.productId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -42,7 +45,6 @@ const ProductCard = ({ item = {}, onRemove }) => {
       return;
     }
 
-    // Determine size for navigation (first variant's size by default)
     const size = item.variants?.[0]?.size || "N/A";
 
     navigation.navigate("ShopStack", {
@@ -58,9 +60,6 @@ const ProductCard = ({ item = {}, onRemove }) => {
     });
   };
 
-  console.log(item);
-
-  // Calculate price range or single price
   const getPriceRange = () => {
     if (item.variants?.length === 1) {
       return `${item.variants[0].price} EGP`;
@@ -71,18 +70,13 @@ const ProductCard = ({ item = {}, onRemove }) => {
   };
 
   return (
-    <Pressable style={styles.container} onPress={handlePress}>
-      {/* Render the First Image Only */}
+    <Pressable style={[styles.container]} onPress={handlePress}>
       {item.image && (
         <Image source={{ uri: item.image }} style={styles.image} />
       )}
-
-      {/* Product Name */}
       <Text style={styles.title} numberOfLines={1}>
         {item.name}
       </Text>
-
-      {/* Product Price and Size Availability */}
       <View style={styles.detailsContainer}>
         <Text style={styles.price}>{getPriceRange()}</Text>
         <Text style={styles.sizeCount}>
@@ -91,8 +85,6 @@ const ProductCard = ({ item = {}, onRemove }) => {
             : `${item.variants.length} Sizes Available`}
         </Text>
       </View>
-
-      {/* Remove Button */}
       <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
         <Text style={styles.removeButtonText}>Remove</Text>
       </TouchableOpacity>
@@ -104,7 +96,7 @@ export default ProductCard;
 
 const styles = StyleSheet.create({
   container: {
-    width: "47%",
+    width: width / 2 - 17, // Set container width dynamically
     marginBottom: 15,
     marginHorizontal: 6,
     backgroundColor: "#fff",
