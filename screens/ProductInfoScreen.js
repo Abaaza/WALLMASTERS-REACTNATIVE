@@ -51,12 +51,13 @@ const ProductInfoScreen = () => {
   // Safely access route params
   const {
     item = {},
-    carouselImages = [],
-    size = "N/A",
-    price = 0,
-    title = "",
+    id = item.id || null,
+    title = item.title || "",
+    images = item.images || [],
+    size = item.size || "N/A",
+    price = item.price || 0,
+    carouselImages = item.carouselImages || null, // Leave as null if not provided
   } = route.params || {};
-
   console.log("ProductInfoScreen loaded with item:", item); // Debugging
 
   const [isSaved, setIsSaved] = useState(false);
@@ -121,6 +122,7 @@ const ProductInfoScreen = () => {
       const token = await AsyncStorage.getItem("authToken");
 
       if (!userId || !token) {
+        Alert.alert("You must be signed in to use this feature.");
         return;
       }
 
@@ -178,6 +180,14 @@ const ProductInfoScreen = () => {
 
   const scrollToTop = () => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]]; // Swap
+    }
+    return array;
   };
 
   return (
@@ -313,7 +323,11 @@ const ProductInfoScreen = () => {
 
         <Text style={styles.sectionTitle}>Today's Offers</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {products.slice(0, 10).map((item, index) => (
+          {shuffleArray(
+            products
+              .filter((item) => item.featured === true) // Filter for featured products
+              .slice(0, 10) // Limit to 10 items
+          ).map((item, index) => (
             <Pressable
               key={`${item.id}-${index}`}
               style={styles.productItem}
@@ -343,7 +357,9 @@ const ProductInfoScreen = () => {
                 {item.variants[item.variants.length - 1].price} EGP
               </Text>
               <Text style={styles.productColor}>
-                Colors: {item.color.join(", ")}
+                {item.variants?.length === 1
+                  ? "1 Size Available"
+                  : `${item.variants.length} Sizes Available`}
               </Text>
             </Pressable>
           ))}
@@ -516,15 +532,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-  productItem: {
-    margin: 7,
-    width: 160,
-    backgroundColor: "#FFF",
-    borderRadius: 10,
-    elevation: 3,
-    padding: 10,
-    alignItems: "center",
-  },
+
   productImage: {
     width: "100%",
     aspectRatio: 1,

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Pressable,
-  Alert,
   Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -46,17 +45,19 @@ const ProductCard = ({ item = {}, onRemove }) => {
     }
 
     const size = item.variants?.[0]?.size || "N/A";
+    const priceRange = {
+      min: item.variants?.[0]?.price || item.price || "N/A",
+      max:
+        item.variants?.[item.variants.length - 1]?.price || item.price || "N/A",
+    };
 
-    navigation.navigate("ShopStack", {
-      screen: "ProductInfo",
-      params: {
-        id: item.productId,
-        title: item.name,
-        price: item.price || "N/A",
-        carouselImages: item.image ? [item.image] : [],
-        size: size,
-        item,
-      },
+    navigation.navigate("ProductInfo", {
+      id: item.productId,
+      title: item.name,
+      priceRange,
+      carouselImages: item.image ? [item.image] : [],
+      size,
+      item, // Pass the entire item object
     });
   };
 
@@ -70,7 +71,7 @@ const ProductCard = ({ item = {}, onRemove }) => {
   };
 
   return (
-    <Pressable style={[styles.container]} onPress={handlePress}>
+    <Pressable style={styles.container} onPress={handlePress}>
       {item.image && (
         <Image source={{ uri: item.image }} style={styles.image} />
       )}
@@ -96,7 +97,7 @@ export default ProductCard;
 
 const styles = StyleSheet.create({
   container: {
-    width: width / 2 - 17, // Set container width dynamically
+    width: width / 2 - 17,
     marginBottom: 15,
     marginHorizontal: 6,
     backgroundColor: "#fff",

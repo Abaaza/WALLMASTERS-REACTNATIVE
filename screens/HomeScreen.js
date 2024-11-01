@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSelector } from "react-redux";
 import ProductItemWM from "../components/ProductItemWM";
 import { SliderBox } from "react-native-image-slider-box";
+import Carousel from "react-native-snap-carousel";
 
 const HomeScreen = () => {
   const [products, setProducts] = useState([]);
@@ -28,6 +29,7 @@ const HomeScreen = () => {
   const [filteredProducts, setFilteredProducts] = useState(products);
 
   const screenWidth = Dimensions.get("window").width;
+  const { width } = Dimensions.get("window");
   const scrollViewRef = useRef(null);
   const cart = useSelector((state) => state.cart.cart);
   const navigation = useNavigation();
@@ -39,7 +41,11 @@ const HomeScreen = () => {
       );
       const data = await response.json();
       setProducts(data);
-      setRandomDeals(getRandomDeals(data));
+
+      // Filter best-seller products for `randomDeals`
+      setRandomDeals(
+        getRandomDeals(data.filter((product) => product.bestSeller === true))
+      );
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -100,26 +106,34 @@ const HomeScreen = () => {
       </View>
     );
   }
+  const renderSliderItem = ({ item }) => (
+    <Image source={item} style={styles.sliderImage} />
+  );
   const renderProductItem = ({ item }) => (
     <ProductItemWM
       key={item.id}
       item={item}
       onPress={() =>
-        navigation.navigate("ShopStack", {
-          screen: "ProductInfo",
-          params: {
-            id: item.id,
-            title: item.name,
-            price: item.variants[0].price,
-            carouselImages: item.images,
-            color: item.color,
-            size: item.variants[0].size,
-            item,
-          },
+        navigation.navigate("ProductInfo", {
+          id: item.id,
+          title: item.name,
+          price: item.variants[0]?.price, // Include optional chaining for safety
+          carouselImages: item.images,
+          color: item.color,
+          size: item.variants[0]?.size,
+          item, // Pass the entire item object
         })
       }
     />
   );
+
+  const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]]; // Swap
+    }
+    return array;
+  };
 
   if (loading) {
     return (
@@ -158,27 +172,21 @@ const HomeScreen = () => {
           resizeMode="cover"
         ></Image>
       </View>
-      {/* Search Bar */}
 
-      {/* Image Slider */}
       <View style={styles.sliderContainer}>
-        <SliderBox
-          images={sliderImages}
-          autoplay={true} // Ensure autoplay is explicitly set to true
-          circleLoop={true} // Enable continuous looping
-          sliderBoxHeight={200} // Set a height for the slider
-          dotColor="#000"
-          inactiveDotColor="#fff"
-          paginationBoxVerticalPadding={10}
-          resizeMethod="resize"
-          ImageComponentStyle={styles.sliderImage}
-          autoplayInterval={3000} // Set the interval for autoplay (in milliseconds)
-          onCurrentImagePressed={(index) =>
-            console.log(`Image ${index + 1} pressed`)
-          }
+        <Carousel
+          data={sliderImages}
+          renderItem={renderSliderItem}
+          sliderWidth={width}
+          itemWidth={width}
+          autoplay={true}
+          loop={true}
+          autoplayInterval={3000}
+          inactiveSlideScale={1}
+          inactiveSlideOpacity={1}
+          enableSnap={true}
         />
       </View>
-
       {/* Trending Deals */}
       <Text style={styles.sectionTitle}>Trending Frames</Text>
       <FlatList
@@ -188,10 +196,13 @@ const HomeScreen = () => {
         numColumns={2}
         contentContainerStyle={styles.listContent}
       />
-
       <Text style={styles.sectionTitle}>Today's Offers</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {products.slice(0, 10).map((item, index) => (
+        {shuffleArray(
+          products
+            .filter((item) => item.featured === true) // Filter for featured products
+            .slice(0, 10) // Limit to 10 items
+        ).map((item, index) => (
           <Pressable
             key={`${item.id}-${index}`}
             style={styles.productItem}
@@ -221,7 +232,9 @@ const HomeScreen = () => {
               {item.variants[item.variants.length - 1].price} EGP
             </Text>
             <Text style={styles.productColor}>
-              Colors: {item.color.join(", ")}
+              {item.variants?.length === 1
+                ? "1 Size Available"
+                : `${item.variants.length} Sizes Available`}
             </Text>
           </Pressable>
         ))}
@@ -229,7 +242,6 @@ const HomeScreen = () => {
 
       {/* Theme Selector */}
       <Text style={styles.sectionTitle}>Select by theme</Text>
-
       <ModalSelector
         data={uniqueThemes.map((theme) => ({
           key: theme,
@@ -242,7 +254,6 @@ const HomeScreen = () => {
       >
         <Text style={styles.selectorText}>{theme || "Choose a theme"}</Text>
       </ModalSelector>
-
       {/* Filtered Products Based on Theme */}
       <FlatList
         data={filteredProducts.slice(0, 4)} // Limit to first 4 products
@@ -251,7 +262,6 @@ const HomeScreen = () => {
         numColumns={2}
         contentContainerStyle={styles.listContent}
       />
-
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           onPress={() => navigation.navigate("ShopStack")}
@@ -277,15 +287,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
-  productItem: {
-    margin: 3,
-    width: 180,
-    backgroundColor: "#FFF",
-    borderRadius: 10,
-    elevation: 3,
-    padding: 0,
-    alignItems: "center",
-  },
+
   productImage: {
     width: "100%",
     aspectRatio: 1,
@@ -325,12 +327,12 @@ const styles = StyleSheet.create({
     margin: 8,
   },
   productItem: {
-    margin: 7,
+    margin: 10,
     width: 160,
     backgroundColor: "#FFF",
     borderRadius: 10,
     elevation: 3,
-    padding: 10,
+    padding: 0,
     alignItems: "center",
   },
   productImage: {

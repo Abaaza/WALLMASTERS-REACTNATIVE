@@ -85,7 +85,6 @@ const LoginScreen = () => {
       // Dispatch Redux action to set userId
       dispatch(setUser(userId));
 
-      Alert.alert("Login Successful", `Welcome back, ${user.name}!`);
       navigation.replace("Profile");
     } catch (error) {
       console.error("Login failed:", error);

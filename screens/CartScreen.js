@@ -3,11 +3,10 @@ import {
   Image,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
+  StyleSheet,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { AntDesign, Feather } from "@expo/vector-icons";
 import { useDispatch, useSelector } from "react-redux";
@@ -25,7 +24,7 @@ const CartScreen = () => {
   const cart = useSelector((state) => state.cart.cart);
   const [isAuthModalVisible, setAuthModalVisible] = useState(false);
   const [isUserLoggedIn, setUserLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Track loading state
+  const [isLoading, setIsLoading] = useState(true);
   const dispatch = useDispatch();
 
   const total = cart
@@ -33,28 +32,27 @@ const CartScreen = () => {
     .toFixed(2);
 
   useEffect(() => {
-    checkAuthStatus(); // Initial check when component mounts
+    checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
-      setUserLoggedIn(!!token); // Set login status based on token existence
+      setUserLoggedIn(!!token);
     } catch (error) {
       console.error("Error checking auth status:", error);
     } finally {
-      setIsLoading(false); // Stop loading after check
+      setIsLoading(false);
     }
   };
 
   const handleProceedToCheckout = async () => {
-    // Recheck authentication every time the button is pressed
     try {
       const token = await AsyncStorage.getItem("authToken");
       if (token) {
-        navigation.navigate("Enter Address"); // If logged in, navigate to address screen
+        navigation.navigate("Enter Address");
       } else {
-        setAuthModalVisible(true); // Show modal if not logged in
+        setAuthModalVisible(true);
       }
     } catch (error) {
       console.error("Error during authentication check:", error);
@@ -62,22 +60,37 @@ const CartScreen = () => {
   };
 
   const handleLogin = async () => {
-    setAuthModalVisible(false); // Close the modal
+    setAuthModalVisible(false);
     const guestCart = JSON.parse(await AsyncStorage.getItem("guestCart")) || [];
     await AsyncStorage.setItem("userCart", JSON.stringify(guestCart));
-    await AsyncStorage.removeItem("guestCart"); // Clear guest cart
-    navigation.navigate("Login"); // Navigate to login/register screen
+    await AsyncStorage.removeItem("guestCart");
+    navigation.navigate("Login");
   };
 
   const handleContinueAsGuest = () => {
-    setAuthModalVisible(false); // Close the modal
-    navigation.navigate("Enter Address"); // Proceed as guest to address screen
+    setAuthModalVisible(false);
+    navigation.navigate("Enter Address");
   };
 
   const increaseQuantity = (item) => dispatch(incrementQuantity(item));
   const decreaseQuantity = (item) =>
     item.quantity > 1 ? dispatch(decrementQuantity(item)) : deleteItem(item);
   const deleteItem = (item) => dispatch(removeFromCart(item));
+
+  const navigateToProductInfo = (item) => {
+    navigation.navigate("ProductInfo", {
+      id: item.id,
+      title: item.name,
+      priceRange: {
+        min: item.variants[0]?.price || item.price,
+        max: item.variants[item.variants.length - 1]?.price || item.price,
+      },
+      carouselImages: item.images,
+      color: item.color,
+      size: item.size,
+      item,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -119,8 +132,12 @@ const CartScreen = () => {
           </Pressable>
 
           <View style={styles.cartItemsContainer}>
-            {cart.map((item, index) => (
-              <View key={`${item.id}-${item.size}`} style={styles.cartItem}>
+            {cart.map((item) => (
+              <Pressable
+                key={`${item.id}-${item.size}`}
+                style={styles.cartItem}
+                onPress={() => navigateToProductInfo(item)}
+              >
                 <View style={styles.itemDetails}>
                   <Image
                     style={styles.itemImage}
@@ -163,7 +180,7 @@ const CartScreen = () => {
                 >
                   <Text style={styles.deleteButtonText}>Remove</Text>
                 </Pressable>
-              </View>
+              </Pressable>
             ))}
           </View>
         </>

@@ -30,8 +30,8 @@ import ChangePasswordScreen from "../screens/ChangePasswordScreen";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Shop Stack Navigator
-// Shop Stack Navigator
+// Individual Stack Navigators with ProductInfoScreen in each
+
 // Shop Stack Navigator
 function ShopStackNavigator() {
   return (
@@ -49,7 +49,7 @@ function ShopStackNavigator() {
           title: route.params?.title || "Product Info",
           headerLeft: () => (
             <TouchableOpacity
-              onPress={() => navigation.navigate("ShopMain")} // Ensure it always navigates back to Shop
+              onPress={() => navigation.navigate("ShopMain")}
               style={styles.backButton}
             >
               <Text style={styles.backButtonText}>Back</Text>
@@ -67,8 +67,17 @@ function ShopStackNavigator() {
 // Home Stack Navigator
 function HomeStackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProductInfo"
+        component={ProductInfoScreen}
+        options={{ headerShown: true, title: "Product Info" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -76,8 +85,12 @@ function HomeStackNavigator() {
 // Profile Stack Navigator
 function ProfileStackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Navigator>
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="Your Orders"
         component={YourOrders}
@@ -113,6 +126,11 @@ function ProfileStackNavigator() {
         component={ChangePasswordScreen}
         options={{ headerShown: true, title: "Change Password" }}
       />
+      <Stack.Screen
+        name="ProductInfo"
+        component={ProductInfoScreen}
+        options={{ headerShown: true, title: "Product Info" }}
+      />
     </Stack.Navigator>
   );
 }
@@ -140,6 +158,11 @@ function CartStackNavigator() {
         name="Order"
         component={OrderScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProductInfo"
+        component={ProductInfoScreen}
+        options={{ headerShown: true, title: "Product Info" }}
       />
     </Stack.Navigator>
   );
@@ -175,7 +198,6 @@ function BottomTabs() {
             ),
         }}
       />
-
       <Tab.Screen
         name="Cart"
         component={CartStackNavigator}
