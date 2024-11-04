@@ -59,6 +59,10 @@ const SavedAddressesScreen = ({ navigation }) => {
   const renderAddress = (address) => (
     <View key={address._id} style={styles.addressContainer}>
       <Text style={styles.addressText}>Name: {address.name}</Text>
+      <Text style={styles.addressText}>
+        Email: {address.email || "N/A"}
+      </Text>{" "}
+      {/* Add email field */}
       <Text style={styles.addressText}>Mobile: {address.mobileNo}</Text>
       <Text style={styles.addressText}>Address 1: {address.houseNo}</Text>
       <Text style={styles.addressText}>Address 2: {address.street}</Text>

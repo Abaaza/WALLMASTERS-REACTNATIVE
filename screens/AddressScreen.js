@@ -20,6 +20,7 @@ const validateAddress = (address) => {
 const AddressScreen = () => {
   const navigation = useNavigation();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState(""); // Add state for email
   const [mobileNo, setMobileNo] = useState("");
   const [houseNo, setHouseNo] = useState("");
   const [street, setStreet] = useState("");
@@ -47,6 +48,7 @@ const AddressScreen = () => {
         const address = response.data[0];
 
         setName(address.name);
+        setEmail(address.email); // Load email if present
         setMobileNo(address.mobileNo);
         setHouseNo(address.houseNo);
         setStreet(address.street);
@@ -64,6 +66,7 @@ const AddressScreen = () => {
       const userId = await AsyncStorage.getItem("userId");
       const address = {
         name,
+        email, // Add email to the address object
         mobileNo,
         houseNo,
         street,
@@ -94,6 +97,7 @@ const AddressScreen = () => {
   const handleProceedToConfirm = () => {
     const address = {
       name,
+      email, // Add email to the address object
       mobileNo,
       houseNo,
       street,
@@ -120,6 +124,13 @@ const AddressScreen = () => {
         value={name}
         onChangeText={setName}
         placeholder="Full Name"
+        style={styles.input}
+      />
+      <TextInput
+        value={email} // Email input field
+        onChangeText={setEmail}
+        placeholder="Email Address"
+        keyboardType="email-address"
         style={styles.input}
       />
       <TextInput
@@ -197,8 +208,8 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
-    backgroundColor: "#f0f0f0", // Optional: Different background for non-editables
-    color: "#000", // Optional: Slightly dim text for non-editables
+    backgroundColor: "#f0f0f0",
+    color: "#000",
     fontSize: 16,
   },
   proceedButton: {

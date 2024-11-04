@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSelector } from "react-redux";
-import axios from "axios"; // Import axios
+import axios from "axios";
 
 const ConfirmationScreen = () => {
   const navigation = useNavigation();
@@ -18,19 +18,17 @@ const ConfirmationScreen = () => {
 
   const address = route.params?.address || {};
   const cart = useSelector((state) => state.cart.cart);
-  console.log("CartCC:", cart);
-  const userId = useSelector((state) => state.cart.userId); // Get userId from Redux
-  console.log("User ID:", userId); // Debug: check if the userId is being logged correctly
+  const userId = useSelector((state) => state.cart.userId);
 
   const subtotal =
     cart?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
-  const shippingCost = subtotal > 2000 ? 0 : 70; // Conditional shipping
-  const total = subtotal + shippingCost; // Total including shipping
+  const shippingCost = subtotal > 2000 ? 0 : 70;
+  const total = subtotal + shippingCost;
 
   const handlePlaceOrder = async () => {
     try {
       const orderData = {
-        userId: userId || "guest", // Include userId in the payload
+        userId: userId || "guest",
         products: cart.map((item) => ({
           productId: item.id,
           name: item.name,
@@ -40,7 +38,10 @@ const ConfirmationScreen = () => {
           image: item.images[0],
         })),
         totalPrice: total,
-        shippingAddress: address,
+        shippingAddress: {
+          ...address, // Ensure address contains email
+          email: address.email || "N/A", // Include email from address
+        },
       };
 
       console.log("Sending Order:", orderData);
@@ -52,7 +53,7 @@ const ConfirmationScreen = () => {
       console.log("Order placed successfully:", response.data);
 
       navigation.navigate("Order", {
-        orderId: response.data.order.orderId, // Pass the backend order ID
+        orderId: response.data.order.orderId,
         subtotal: subtotal,
         shippingCost: shippingCost,
         total: total,
@@ -71,6 +72,7 @@ const ConfirmationScreen = () => {
       <View style={styles.section}>
         <Text style={styles.subHeader}>Shipping Address:</Text>
         <Text>Name: {address.name || "N/A"}</Text>
+        <Text>Email: {address.email || "N/A"}</Text>
         <Text>Mobile: {address.mobileNo}</Text>
         <Text>Address 1: {address.houseNo || "N/A"}</Text>
         <Text>Address 2: {address.street}</Text>
