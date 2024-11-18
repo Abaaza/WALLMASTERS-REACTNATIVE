@@ -1,37 +1,32 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    savedAddresses: [
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  savedAddresses: {
+    type: [
       {
-        name: { type: String },
-        mobileNo: { type: String },
-        houseNo: { type: String },
-        street: { type: String },
-        city: { type: String },
-        postalCode: { type: String },
+        name: String,
+        email: String,
+        mobileNo: String,
+        houseNo: String,
+        street: String,
+        city: String,
+        postalCode: { type: String, default: null },
+        isDefault: { type: Boolean, default: false },
       },
     ],
-    savedItems: [
-      {
-        productId: { type: String, required: true },
-        name: { type: String, required: true },
-        price: { type: Number, required: true },
-        image: { type: String },
-      },
-    ],
+    default: [], // Initialize as an empty array
   },
-  { timestamps: true }
-);
-
-// Comment out or remove the pre-save middleware to stop hashing the password
-// userSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) return next();
-//   this.password = await bcrypt.hash(this.password, 10);
-//   next();
-// });
+  savedItems: [
+    {
+      productId: String,
+      name: String,
+      price: Number,
+      image: String,
+    },
+  ],
+});
 
 module.exports = mongoose.model("User", userSchema);

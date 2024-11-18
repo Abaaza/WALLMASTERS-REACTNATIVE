@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
-  Image,
 } from "react-native";
+import { Image } from "expo-image"; // Import from expo-image
 import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
 import ProductItemWM from "../components/ProductItemWM";
@@ -17,7 +17,6 @@ const ShopScreen = ({ route }) => {
   const navigation = useNavigation();
   const initialTheme = route?.params?.theme || "";
 
-  // State and refs
   const scrollViewRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -27,7 +26,6 @@ const ShopScreen = ({ route }) => {
   const [selectedTheme, setSelectedTheme] = useState(initialTheme);
   const [selectedThreePiece, setSelectedThreePiece] = useState(null);
 
-  // Fetch products from the API
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -48,7 +46,6 @@ const ShopScreen = ({ route }) => {
     fetchProducts();
   }, []);
 
-  // Apply filters
   useEffect(() => {
     const applyFilters = () => {
       const filtered = products.filter(
@@ -68,7 +65,6 @@ const ShopScreen = ({ route }) => {
     applyFilters();
   }, [selectedColor, selectedTheme, selectedThreePiece, products]);
 
-  // useMemo for unique themes and colors
   const uniqueThemes = useMemo(() => {
     const themes = products.map((product) => product.theme);
     return Array.from(new Set(themes));
@@ -79,7 +75,6 @@ const ShopScreen = ({ route }) => {
     return Array.from(new Set(colors));
   }, [products]);
 
-  // Reset filters
   const resetFilters = () => {
     setSelectedColor("");
     setSelectedTheme("");
@@ -87,23 +82,6 @@ const ShopScreen = ({ route }) => {
     setFilteredProducts(products);
   };
 
-  // Render loading state
-  if (loading) {
-    return (
-      <View style={styles.errorContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-
-  // Render empty state
-  if (filteredProducts.length === 0) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>No products available.</Text>
-      </View>
-    );
-  }
   const renderItem = ({ item }) => (
     <ProductItemWM
       key={item.id}
@@ -119,78 +97,92 @@ const ShopScreen = ({ route }) => {
           carouselImages: item.images,
           color: item.color,
           size: item.variants[0]?.size,
-          item, // Pass the entire item object for deeper navigation
+          item,
         })
       }
+      renderImage={() => (
+        <Image
+          style={styles.productImage}
+          source={item.imageUrl}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+      )}
     />
   );
 
-  // Render content
+  if (loading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} ref={scrollViewRef}>
-      {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
           style={styles.logo}
           source={require("../assets/13.jpg")}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
         />
       </View>
 
-      {/* Theme Selector */}
-      <ModalSelector
-        data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
-        initValue="Select Theme"
-        onChange={(option) => setSelectedTheme(option.label)}
-        style={styles.modalSelector}
-        cancelText="Close"
-      >
-        <Text style={styles.selectorText}>
-          {selectedTheme || "Select Theme"}
-        </Text>
-      </ModalSelector>
+      {/* Filter Selectors and Buttons */}
+      <View style={styles.headerContainer}>
+        <ModalSelector
+          data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
+          initValue="Select Theme"
+          onChange={(option) => setSelectedTheme(option.label)}
+          style={styles.modalSelector}
+          cancelText="Close"
+        >
+          <Text style={styles.selectorText}>
+            {selectedTheme || "Select Theme"}
+          </Text>
+        </ModalSelector>
 
-      {/* Color Selector */}
-      <ModalSelector
-        data={uniqueColors.map((color) => ({ key: color, label: color }))}
-        initValue="Select Color"
-        onChange={(option) => setSelectedColor(option.label)}
-        style={styles.modalSelector}
-        cancelText="Close"
-      >
-        <Text style={styles.selectorText}>
-          {selectedColor || "Select Color"}
-        </Text>
-      </ModalSelector>
+        <ModalSelector
+          data={uniqueColors.map((color) => ({ key: color, label: color }))}
+          initValue="Select Color"
+          onChange={(option) => setSelectedColor(option.label)}
+          style={styles.modalSelector}
+          cancelText="Close"
+        >
+          <Text style={styles.selectorText}>
+            {selectedColor || "Select Color"}
+          </Text>
+        </ModalSelector>
 
-      {/* Three-Piece Selector */}
-      <ModalSelector
-        data={[
-          { key: "yes", label: "3 Pieces" },
-          { key: "no", label: "One Piece" },
-        ]}
-        initValue="Select Option"
-        onChange={(option) => setSelectedThreePiece(option.key)}
-        style={styles.modalSelector}
-        cancelText="Close"
-      >
-        <Text style={styles.selectorText}>
-          {selectedThreePiece === null
-            ? "Number of pieces"
-            : selectedThreePiece === "yes"
-            ? "3 Pieces"
-            : "One Piece"}
-        </Text>
-      </ModalSelector>
+        <ModalSelector
+          data={[
+            { key: "yes", label: "3 Pieces" },
+            { key: "no", label: "One Piece" },
+          ]}
+          initValue="Select Option"
+          onChange={(option) => setSelectedThreePiece(option.key)}
+          style={styles.modalSelector}
+          cancelText="Close"
+        >
+          <Text style={styles.selectorText}>
+            {selectedThreePiece === null
+              ? "Number of pieces"
+              : selectedThreePiece === "yes"
+              ? "3 Pieces"
+              : "One Piece"}
+          </Text>
+        </ModalSelector>
 
-      {/* Reset Filters Button */}
-      <TouchableOpacity onPress={resetFilters} style={styles.resetButton}>
-        <Text style={styles.resetButtonText}>Reset Filters</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={resetFilters} style={styles.fullWidthButton}>
+          <Text style={styles.buttonText}>Reset Filters</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Products List */}
       <FlatList
-        data={filteredProducts.slice(0, visibleProducts)} // Limit to visible products
+        data={filteredProducts.slice(0, visibleProducts)}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}
@@ -201,9 +193,9 @@ const ShopScreen = ({ route }) => {
       {visibleProducts < filteredProducts.length && (
         <TouchableOpacity
           onPress={() => setVisibleProducts((prev) => prev + 14)}
-          style={styles.loadMoreBtn}
+          style={styles.fullWidthButton2} // Use fullWidthButton styling
         >
-          <Text style={styles.loadMoreText}>Load More</Text>
+          <Text style={styles.buttonText}>Load More</Text>
         </TouchableOpacity>
       )}
     </ScrollView>
@@ -215,53 +207,32 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 0,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginVertical: 5,
-    color: "#333",
+  headerContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: "center",
   },
   modalSelector: {
-    marginVertical: 7,
+    marginVertical: 5,
     backgroundColor: "#DCDCDC",
     borderRadius: 8,
     padding: 10,
-    marginHorizontal: 5,
+    width: "100%", // Full-width for consistency
   },
   selectorText: {
     fontSize: 16,
     color: "#000",
   },
-  resetButton: {
+  fullWidthButton: {
     backgroundColor: "#ff6347",
-    padding: 10,
-    borderRadius: 5,
+    padding: 7,
+    borderRadius: 8,
     alignItems: "center",
-    marginVertical: 10,
-    marginHorizontal: 5,
+    marginVertical: 5,
+    width: "100%", // Full-width
+    alignSelf: "center",
   },
-  resetButtonText: {
-    color: "#fff",
-    fontSize: 16,
-  },
-  productsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  productWrapper: {
-    flexBasis: "50%",
-    marginBottom: 10,
-  },
-  loadMoreBtn: {
-    backgroundColor: "#ff6347",
-    padding: 10,
-    marginVertical: 10,
-    borderRadius: 5,
-    alignItems: "center",
-    marginHorizontal: 5,
-  },
-  loadMoreText: {
+  buttonText: {
     color: "#fff",
     fontSize: 16,
   },
@@ -271,42 +242,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
   },
-  errorText: {
-    fontSize: 18,
-    color: "red",
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: "#000",
-  },
-  searchInput: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "white",
-    borderRadius: 3,
-    paddingHorizontal: 10,
-    height: 35,
-    alignItems: "center",
-  },
   logoContainer: {
-    width: "100%", // Full width of the container
-    alignItems: "center", // Centering the image
-    flex: 1,
-    marginBottom: 10,
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 5,
   },
   logo: {
-    width: "100%", // Image takes 100% width
-    height: undefined, // Allow height to adjust automatically
+    width: "100%",
+    height: undefined,
     aspectRatio: 10,
   },
   listContent: {
-    justifyContent: "center", // Center the content horizontally
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 10, // Add vertical padding
-    paddingBottom: 20, // Add bottom padding
+    paddingVertical: 10,
+    paddingBottom: 5,
+  },
+  productImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+  },
+  fullWidthButton2: {
+    backgroundColor: "#ff6347",
+    padding: 7,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 5,
+    width: "95%", // Full-width
+    alignSelf: "center",
+    marginBottom: 10,
   },
 });
 

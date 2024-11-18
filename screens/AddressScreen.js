@@ -20,7 +20,7 @@ const validateAddress = (address) => {
 const AddressScreen = () => {
   const navigation = useNavigation();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState(""); // Add state for email
+  const [email, setEmail] = useState("");
   const [mobileNo, setMobileNo] = useState("");
   const [houseNo, setHouseNo] = useState("");
   const [street, setStreet] = useState("");
@@ -32,9 +32,38 @@ const AddressScreen = () => {
   const paymentMethod = "Cash on Delivery"; // Non-editable payment method
 
   useEffect(() => {
-    loadSavedAddress();
+    loadUserData(); // Load user name and email if signed in
+    loadSavedAddress(); // Load saved address if available
   }, []);
 
+  // Load user name and email if the user is signed in
+  const loadUserData = async () => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        console.warn("No user ID found in AsyncStorage");
+        return;
+      }
+      console.log("Retrieved user ID:", userId);
+
+      const userData = await axios.get(
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/users/${userId}`
+      );
+
+      if (userData.data) {
+        setName(userData.data.name);
+        setEmail(userData.data.email);
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.warn("User not found on the server");
+      } else {
+        console.error("Error loading user data:", error);
+      }
+    }
+  };
+
+  // Load saved address if it exists for the user
   const loadSavedAddress = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
@@ -45,10 +74,16 @@ const AddressScreen = () => {
       );
 
       if (response.data && response.data.length > 0) {
-        const address = response.data[0];
+        // Find the address with isDefault set to true
+        const defaultAddress = response.data.find(
+          (address) => address.isDefault
+        );
 
-        setName(address.name);
-        setEmail(address.email); // Load email if present
+        // If a default address is found, use it; otherwise, fall back to the first address
+        const address = defaultAddress || response.data[0];
+
+        setName(address.name || name);
+        setEmail(address.email || email);
         setMobileNo(address.mobileNo);
         setHouseNo(address.houseNo);
         setStreet(address.street);
@@ -64,9 +99,14 @@ const AddressScreen = () => {
   const handleSaveAddress = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        Alert.alert("Error", "User ID is missing.");
+        return;
+      }
+
       const address = {
         name,
-        email, // Add email to the address object
+        email,
         mobileNo,
         houseNo,
         street,
@@ -82,28 +122,46 @@ const AddressScreen = () => {
 
       console.log("Saving address:", address);
 
-      const response = await axios.post(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`,
-        { address }
-      );
+      try {
+        // Attempt to save the address
+        await axios.post(
+          `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`,
+          { address }
+        );
+        console.log("Address saved successfully");
 
-      console.log("Address saved successfully:", response.data);
+        // Refresh the saved address list after saving
+        await loadSavedAddress();
+      } catch (error) {
+        if (error.response && error.response.status === 409) {
+          // Handle duplicate address without showing an alert
+          console.log("Duplicate address detected, proceeding without saving.");
+        } else {
+          console.error("Error saving address:", error);
+          Alert.alert("Error", "Failed to save the address.");
+          return;
+        }
+      }
+
+      // Navigate to Order Summary screen after saving or if duplicate
       navigation.navigate("Order Summary", { address, paymentMethod });
     } catch (error) {
-      console.error("Error saving address:", error);
+      console.error("Error:", error);
+      Alert.alert("Error", "Failed to complete the action.");
     }
   };
 
   const handleProceedToConfirm = () => {
     const address = {
       name,
-      email, // Add email to the address object
+      email,
       mobileNo,
       houseNo,
       street,
       city,
       postalCode,
       country,
+      isDefault: false, // Default to false unless specified otherwise
     };
 
     if (!validateAddress(address)) {
@@ -111,11 +169,7 @@ const AddressScreen = () => {
       return;
     }
 
-    if (isAddressLoaded) {
-      navigation.navigate("Order Summary", { address, paymentMethod });
-    } else {
-      handleSaveAddress();
-    }
+    handleSaveAddress(); // Save the address (whether new or edited)
   };
 
   return (
@@ -127,7 +181,7 @@ const AddressScreen = () => {
         style={styles.input}
       />
       <TextInput
-        value={email} // Email input field
+        value={email}
         onChangeText={setEmail}
         placeholder="Email Address"
         keyboardType="email-address"

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -7,16 +7,13 @@ const SavedAddressesScreen = ({ navigation }) => {
   const [addresses, setAddresses] = useState([]);
 
   useEffect(() => {
-    loadSavedAddresses(); // Load addresses on component mount
+    loadSavedAddresses();
   }, []);
 
   const loadSavedAddresses = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      console.log("Loaded User ID:", userId); // Debugging User ID
-
       if (!userId) {
-        Alert.alert("Error", "User ID not found.");
         return;
       }
 
@@ -24,50 +21,79 @@ const SavedAddressesScreen = ({ navigation }) => {
         `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
       );
 
-      console.log("Address Response:", response.data); // Debugging Response
-
-      if (response.data.length > 0) {
-        setAddresses(response.data); // Set the response to state
-      } else {
-        setAddresses([]); // Clear state if no addresses found
-      }
+      const sortedAddresses = response.data.sort((a, b) =>
+        a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+      );
+      setAddresses(sortedAddresses);
     } catch (error) {
-      console.error("Error loading address:", error);
-      Alert.alert("Error", "Failed to load addresses.");
+      console.error("Error loading addresses:", error);
     }
   };
 
-  const deleteAddress = async (id) => {
+  const deleteAddress = async (addressId) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       await axios.delete(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}/${addressId}`
       );
 
-      // Update state after deletion
       setAddresses((prevAddresses) =>
-        prevAddresses.filter((address) => address._id !== id)
+        prevAddresses
+          .filter((address) => address._id !== addressId)
+          .sort((a, b) =>
+            a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+          )
       );
-
-      Alert.alert("Success", "Address deleted.");
     } catch (error) {
       console.error("Error deleting address:", error);
-      Alert.alert("Error", "Failed to delete address.");
+    }
+  };
+
+  const setDefaultAddress = async (addressId) => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      await axios.put(
+        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}/default/${addressId}`
+      );
+
+      setAddresses((prevAddresses) =>
+        prevAddresses
+          .map((address) =>
+            address._id === addressId
+              ? { ...address, isDefault: true }
+              : { ...address, isDefault: false }
+          )
+          .sort((a, b) =>
+            a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+          )
+      );
+    } catch (error) {
+      console.error("Error setting default address:", error);
     }
   };
 
   const renderAddress = (address) => (
     <View key={address._id} style={styles.addressContainer}>
       <Text style={styles.addressText}>Name: {address.name}</Text>
-      <Text style={styles.addressText}>
-        Email: {address.email || "N/A"}
-      </Text>{" "}
-      {/* Add email field */}
+      <Text style={styles.addressText}>Email: {address.email || "N/A"}</Text>
       <Text style={styles.addressText}>Mobile: {address.mobileNo}</Text>
       <Text style={styles.addressText}>Address 1: {address.houseNo}</Text>
       <Text style={styles.addressText}>Address 2: {address.street}</Text>
       <Text style={styles.addressText}>City: {address.city}</Text>
       <Text style={styles.addressText}>Postal Code: {address.postalCode}</Text>
+
+      <Pressable
+        onPress={() => setDefaultAddress(address._id)}
+        style={[
+          styles.defaultButton,
+          address.isDefault && styles.defaultButtonActive,
+        ]}
+      >
+        <Text style={styles.buttonText}>
+          {address.isDefault ? "Default Address" : "Set as Default"}
+        </Text>
+      </Pressable>
+
       <Pressable
         onPress={() => deleteAddress(address._id)}
         style={styles.deleteButton}
@@ -78,21 +104,25 @@ const SavedAddressesScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
       <Text style={styles.title}>Saved Addresses</Text>
       {addresses.length > 0 ? (
         addresses.map((address) => renderAddress(address))
       ) : (
         <Text style={styles.emptyText}>No saved addresses found.</Text>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
 export default SavedAddressesScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  scrollContainer: {
+    padding: 20,
+    backgroundColor: "#fff",
+    flexGrow: 1,
+  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -106,11 +136,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   addressText: { fontSize: 16, marginBottom: 5 },
+  defaultButton: {
+    backgroundColor: "#007bff",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  defaultButtonActive: {
+    backgroundColor: "#4CAF50",
+  },
   deleteButton: {
     backgroundColor: "#ff6347",
     padding: 10,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
   },
   buttonText: { color: "#fff", fontWeight: "bold" },
   emptyText: {

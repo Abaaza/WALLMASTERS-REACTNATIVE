@@ -14,7 +14,7 @@ const shippingAddressSchema = new mongoose.Schema({
   houseNo: { type: String, required: true },
   street: { type: String, required: true },
   city: { type: String, required: true },
-  postalCode: { type: String, required: true },
+  postalCode: { type: String, required: false },
   mobileNo: { type: String, required: true },
   name: { type: String, required: true },
   email: {
@@ -31,7 +31,8 @@ const shippingAddressSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    orderId: { type: String, required: true, unique: true }, // Unique order identifier
+    orderId: { type: String, required: true, unique: true },
+    user: { type: String, default: "guest" }, // Include user field to store userId or "guest"
     products: [productSchema],
     totalPrice: { type: Number, required: true },
     shippingAddress: { type: shippingAddressSchema, required: true },

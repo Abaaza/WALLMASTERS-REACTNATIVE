@@ -7,6 +7,7 @@ console.log("CONNECTION_STRING:", process.env.CONNECTION_STRING);
 console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 const User = require("./models/user");
 const Order = require("./models/order");
@@ -34,6 +35,17 @@ const generateOrderId = () => {
   const datePart = new Date().toISOString().split("T")[0].replace(/-/g, "");
   const randomPart = Math.floor(1000 + Math.random() * 9000);
   return `ORD-${datePart}-${randomPart}`;
+};
+
+const authenticate = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "No token provided" });
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ message: "Invalid token" });
+    req.user = decoded;
+    next();
+  });
 };
 
 const transporter = nodemailer.createTransport({
@@ -69,11 +81,15 @@ app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find the user by email
     const user = await User.findOne({ email });
+
+    // Check if the user exists and the password matches
     if (!user || user.password !== password) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // Generate a JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
@@ -142,14 +158,35 @@ app.post("/change-password", async (req, res) => {
   try {
     const { email, oldPassword, newPassword } = req.body;
 
+    // Log the received email and passwords for validation
+    console.log("Received email:", email);
+    console.log("Received old password:", oldPassword);
+    console.log("Received new password:", newPassword);
+
+    if (!email || !oldPassword || !newPassword) {
+      console.error("Validation error: Missing fields in the request body.");
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const user = await User.findOne({ email });
-    if (!user || user.password !== oldPassword) {
+    if (!user) {
+      console.error("User not found for email:", email);
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    console.log("Stored password for user:", user.password);
+
+    // Check if the provided old password matches the stored password
+    if (user.password !== oldPassword) {
+      console.error("Incorrect old password provided.");
       return res.status(400).json({ message: "Incorrect old password" });
     }
 
+    // Update the password
     user.password = newPassword;
     await user.save();
 
+    console.log("Password updated successfully for user:", email);
     res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
     console.error("Error changing password:", error);
@@ -265,19 +302,41 @@ app.post("/change-password", async (req, res) => {
 app.post("/addresses/:userId", async (req, res) => {
   try {
     const { address } = req.body;
-    const user = await User.findById(req.params.userId);
+    if (!address || typeof address !== "object") {
+      return res.status(400).json({ message: "Invalid address format." });
+    }
 
+    const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Initialize savedAddresses if it is null or undefined
+    // Initialize savedAddresses if undefined
     user.savedAddresses = user.savedAddresses || [];
+
+    // Check if the address is already saved by comparing key fields
+    const isDuplicate = user.savedAddresses.some(
+      (savedAddress) =>
+        savedAddress.houseNo === address.houseNo &&
+        savedAddress.street === address.street &&
+        savedAddress.city === address.city &&
+        savedAddress.postalCode === address.postalCode
+    );
+
+    if (isDuplicate) {
+      // Use a 409 Conflict status code for duplicate addresses
+      return res.status(409).json({ message: "Duplicate address found" });
+    }
+
+    // Add the address if it’s not a duplicate
     user.savedAddresses.push(address);
     await user.save();
 
-    res.status(200).json({ message: "Address saved successfully" });
+    res.status(201).json({
+      message: "Address saved successfully",
+      savedAddresses: user.savedAddresses,
+    });
   } catch (error) {
     console.error("Error saving address:", error);
-    res.status(500).json({ message: "Failed to save address" });
+    res.status(500).json({ message: "Failed to save address", error });
   }
 });
 
@@ -301,26 +360,88 @@ app.get("/addresses/:userId", async (req, res) => {
 });
 
 // DELETE /addresses/:userId - Delete Address
-app.delete("/addresses/:userId", async (req, res) => {
+app.delete("/addresses/:userId/:addressId", async (req, res) => {
   try {
-    console.log("Deleting address for user:", req.params.userId);
+    const { userId, addressId } = req.params;
+    console.log(
+      "Attempting to delete address with ID:",
+      addressId,
+      "for user:",
+      userId
+    );
 
-    const user = await User.findById(req.params.userId);
+    // Use $pull to remove the address from the savedAddresses array based on addressId
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedAddresses: { _id: addressId } } },
+      { new: true }
+    );
+
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.savedAddresses = null; // Clear addresses
-    await user.save();
-
-    console.log("Address deleted successfully for user:", req.params.userId);
+    console.log("Address deleted successfully:", addressId);
     res.status(200).json({ message: "Address deleted successfully" });
   } catch (error) {
     console.error("Error deleting address:", error);
     res.status(500).json({ message: "Failed to delete address", error });
   }
 });
+
+// POST /addresses/:userId/default - Set Default Address
+app.post("/addresses/:userId/default", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { addressId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const address = user.savedAddresses.find(
+      (address) => address._id.toString() === addressId
+    );
+
+    if (!address) {
+      return res.status(404).json({ message: "Address not found" });
+    }
+
+    user.defaultAddress = addressId; // Set the default address ID
+    await user.save();
+
+    res.status(200).json({ message: "Default address set successfully" });
+  } catch (error) {
+    console.error("Error setting default address:", error);
+    res.status(500).json({ message: "Failed to set default address", error });
+  }
+});
+// PUT /addresses/:userId/default/:addressId - Set Default Address
+// PUT /addresses/:userId/default/:addressId - Set Default Address
+app.put("/addresses/:userId/default/:addressId", async (req, res) => {
+  try {
+    const { userId, addressId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update the default address
+    user.savedAddresses.forEach((address) => {
+      address.isDefault = address._id.toString() === addressId;
+    });
+
+    await user.save();
+    res.status(200).json({ message: "Default address updated successfully" });
+  } catch (error) {
+    console.error("Error setting default address:", error);
+    res.status(500).json({ message: "Failed to set default address", error });
+  }
+});
+
 // POST /save-for-later/:userId - Save product for later
 app.post("/save-for-later/:userId", async (req, res) => {
   try {
@@ -402,6 +523,160 @@ app.delete("/saved-items/:userId/:productId", async (req, res) => {
     console.error("Error deleting saved item:", error);
     res.status(500).json({ message: "Failed to delete saved item." });
   }
+});
+
+app.post("/send-email", (req, res) => {
+  const { name, email, comment } = req.body;
+
+  const mailOptions = {
+    from: `"Wall Masters" <${process.env.EMAIL_USER}>`, // Use verified sender email
+    to: process.env.EMAIL_USER,
+    subject: `New Contact Form Submission from ${name}`,
+    text: `You have a new message from your contact form:
+    
+  Name: ${name}
+  Email: ${email}
+  Comment: ${comment}`,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error sending email:", error);
+      return res.status(500).json({
+        message: "Email sending failed",
+        error: error.toString(), // Return error details
+      });
+    }
+    console.log("Email sent:", info.response);
+    res.status(200).json({ message: "Email sent successfully!" });
+  });
+});
+
+// Backend route to get user details
+app.get("/user/details", authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return essential user details
+    res.json({ userId: user._id, name: user.name, email: user.email });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to retrieve user details" });
+  }
+});
+
+app.post("/request-password-reset", async (req, res) => {
+  const { email } = req.body;
+  console.log("Received password reset request for email:", email);
+
+  try {
+    // Step 1: Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("User not found for email:", email);
+      return res.status(404).json({ message: "User not found." });
+    }
+    console.log("User found for email:", email);
+
+    // Step 2: Generate reset token and expiration
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetToken = resetToken;
+    user.resetTokenExpiration = Date.now() + 3600000; // Token expires in 1 hour
+    console.log("Generated reset token:", resetToken);
+    console.log(
+      "Token expiration set to:",
+      new Date(user.resetTokenExpiration).toLocaleString()
+    );
+
+    // Save the token and expiration to the user's document in the database
+    await user.save();
+    console.log("Reset token and expiration saved to user profile for:", email);
+
+    // Step 3: Construct reset link
+    const resetLink = `https://www.wall-masters.com/reset-password/${resetToken}`;
+    console.log("Reset link generated:", resetLink);
+    console.log;
+    // Step 4: Send reset email
+    console.log("Attempting to send password reset email to:", email);
+    await transporter.sendMail({
+      from: `"Wall Masters" <info@wall-masters.com>`,
+      to: email,
+      subject: "Password Reset",
+      text: `Please use the following link to reset your password: ${resetLink}`,
+      html: `<p>Please use the following link to reset your password:</p><p><a href="${resetLink}">${resetLink}</a></p>`,
+    });
+    console.log("Password reset email sent successfully to:", email);
+
+    // Step 5: Respond to the client
+    res
+      .status(200)
+      .json({ message: "Password reset link sent to your email." });
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    res.status(500).json({ message: "Failed to send password reset email." });
+  }
+});
+
+app.post("/reset-password", async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiration: { $gt: Date.now() }, // Check if token is still valid
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Update the user's password and clear the reset token fields
+    user.password = password; // Hash this password in production!
+    user.resetToken = undefined;
+    user.resetTokenExpiration = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully" });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).json({ message: "Failed to reset password" });
+  }
+});
+
+// GET /users/:userId - Retrieve User by ID
+app.get("/users/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error retrieving user:", error);
+    res.status(500).json({ message: "Server error retrieving user", error });
+  }
+});
+
+// Verify session endpoint
+app.get("/auth/verify-session", (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1]; // Extract token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ message: "Token missing" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+    // If verification is successful, return success status
+    res.status(200).json({ message: "Token is valid" });
+  });
 });
 
 app.listen(PORT, () => {

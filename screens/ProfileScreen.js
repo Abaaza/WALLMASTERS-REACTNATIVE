@@ -1,49 +1,51 @@
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
   View,
-  Pressable,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  SafeAreaView,
   StatusBar,
+  ActivityIndicator,
   FlatList,
   Image,
-  Alert,
-  ActivityIndicator,
 } from "react-native";
-import { Ionicons, AntDesign } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
-  const [userName, setUserName] = useState("");
-  const [loading, setLoading] = useState(true); // Loading state for async operations
+  const [userInfo, setUserInfo] = useState({ name: "", email: "" });
+  const [loading, setLoading] = useState(true);
 
   const menuOptions = [
     { id: "1", title: "Your Orders", screen: "Your Orders" },
-    { id: "2", title: "Your Account", screen: "Your Account" },
-    { id: "3", title: "Saved Items", screen: "Saved Items" },
-
+    { id: "4", title: "Saved Items", screen: "Saved Items" }, // Added "Saved Items" option
+    { id: "2", title: "Manage Addresses", screen: "Saved Addresses" },
+    { id: "3", title: "Change Password", screen: "ChangePassword" },
     { id: "5", title: "Logout", action: "logout" },
   ];
 
-  // Check if the user is logged in
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         const token = await AsyncStorage.getItem("authToken");
         if (token) {
           const storedName = await AsyncStorage.getItem("userName");
-          setUserName(storedName || "User");
+          const storedEmail = await AsyncStorage.getItem("userEmail");
+          setUserInfo({
+            name: storedName || "No name provided",
+            email: storedEmail || "No email provided",
+          });
         } else {
-          navigation.replace("Login"); // Redirect to Login if not logged in
+          navigation.replace("Login");
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
       } finally {
-        setLoading(false); // Stop loading when check is done
+        setLoading(false);
       }
     };
 
@@ -68,12 +70,12 @@ const ProfileScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <Pressable
-      style={styles.listItem}
+    <TouchableOpacity
+      style={styles.option}
       onPress={() => handlePress(item.screen, item.action)}
     >
-      <Text style={styles.listItemText}>{item.title}</Text>
-    </Pressable>
+      <Text style={styles.optionText}>{item.title}</Text>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -92,8 +94,22 @@ const ProfileScreen = () => {
         source={require("../assets/13.jpg")}
         resizeMode="cover"
       />
-      <ScrollView style={styles.container}>
-        <Text style={styles.welcomeText}>Welcome, {userName}!</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.logoContainer}></View>
+        <Text style={styles.welcomeText}>Welcome, {userInfo.name}!</Text>
+
+        {/* Personal Info Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Personal Info</Text>
+          <View style={styles.option}>
+            <Text style={styles.optionText}>Name: {userInfo.name}</Text>
+          </View>
+          <View style={styles.option}>
+            <Text style={styles.optionText}>Email: {userInfo.email}</Text>
+          </View>
+        </View>
+
+        {/* Menu Options */}
         <FlatList
           data={menuOptions}
           renderItem={renderItem}
@@ -112,44 +128,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "white",
   },
-  container: {
-    padding: 10,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  headerImage: {
-    width: 140,
-    height: 120,
-    resizeMode: "contain",
-  },
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginRight: 12,
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginTop: 25,
-    textAlign: "center",
-  },
-  listContainer: {
-    marginTop: 20,
-  },
-  listItem: {
-    padding: 15,
-    marginVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#E0E0E0",
-    alignItems: "center",
-  },
-  listItemText: {
-    fontSize: 16,
-    fontWeight: "600",
+  container: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   logoContainer: {
     width: "100%",
@@ -159,5 +145,33 @@ const styles = StyleSheet.create({
     width: "100%",
     height: undefined,
     aspectRatio: 10,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginVertical: 10,
+  },
+  section: {
+    marginVertical: 15,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  option: {
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  optionText: {
+    fontSize: 18,
+    color: "#000",
+  },
+  listContainer: {
+    marginTop: 20,
   },
 });

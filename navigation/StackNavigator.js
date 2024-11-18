@@ -19,7 +19,7 @@ import OrderScreen from "../screens/OrderScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ShopScreen from "../screens/ShopScreen";
 import YourOrders from "../screens/YourOrders";
-import AccountScreen from "../screens/AccountScreen";
+
 import SavedItemsScreen from "../screens/SavedItemsScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import LoginScreen from "../screens/LoginScreen";
@@ -96,11 +96,7 @@ function ProfileStackNavigator() {
         component={YourOrders}
         options={{ headerShown: true }}
       />
-      <Stack.Screen
-        name="Your Account"
-        component={AccountScreen}
-        options={{ headerShown: true }}
-      />
+
       <Stack.Screen
         name="Saved Addresses"
         component={SavedAddressesScreen}
