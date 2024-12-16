@@ -12,7 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const { width } = Dimensions.get("window"); // Get screen width
+const { width } = Dimensions.get("window");
 
 const ProductCard = ({ item = {}, onRemove }) => {
   const navigation = useNavigation();
@@ -27,13 +27,13 @@ const ProductCard = ({ item = {}, onRemove }) => {
       }
 
       await axios.delete(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/saved-items/${userId}/${item.productId}`,
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/saved-items/${userId}/${item.productId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      onRemove(); // Trigger the onRemove callback to update the state
+      onRemove(); // Trigger callback to update the state
     } catch (error) {
       console.error("Error removing item:", error);
     }
@@ -41,28 +41,29 @@ const ProductCard = ({ item = {}, onRemove }) => {
 
   const handlePress = () => {
     if (!item || !item.productId || !item.name) {
+      console.error("Incomplete product data:", item);
       return;
     }
-
-    const size = item.variants?.[0]?.size || "N/A";
-    const priceRange = {
-      min: item.variants?.[0]?.price || item.price || "N/A",
-      max:
-        item.variants?.[item.variants.length - 1]?.price || item.price || "N/A",
-    };
 
     navigation.navigate("ProductInfo", {
       id: item.productId,
       title: item.name,
-      priceRange,
-      carouselImages: item.image ? [item.image] : [],
-      size,
-      item, // Pass the entire item object
+      priceRange: {
+        min: item.price || item.variants?.[0]?.price || 0,
+        max:
+          item.price || item.variants?.[item.variants.length - 1]?.price || 0,
+      },
+      carouselImages: item.images || [item.image] || [],
+      size: item.variants?.[0]?.size || "N/A",
+      item, // Pass the full product object
     });
   };
 
   const getPriceRange = () => {
-    if (item.variants?.length === 1) {
+    if (!item.variants || item.variants.length === 0) {
+      return `${item.price || "N/A"} EGP`;
+    }
+    if (item.variants.length === 1) {
       return `${item.variants[0].price} EGP`;
     }
     return `${item.variants[0].price} - ${
@@ -70,11 +71,14 @@ const ProductCard = ({ item = {}, onRemove }) => {
     } EGP`;
   };
 
+  const imageSource =
+    (item.images && item.images[0]) ||
+    item.image ||
+    "https://via.placeholder.com/150";
+
   return (
     <Pressable style={styles.container} onPress={handlePress}>
-      {item.image && (
-        <Image source={{ uri: item.image }} style={styles.image} />
-      )}
+      <Image source={{ uri: imageSource }} style={styles.image} />
       <Text style={styles.title} numberOfLines={1}>
         {item.name}
       </Text>
@@ -83,7 +87,7 @@ const ProductCard = ({ item = {}, onRemove }) => {
         <Text style={styles.sizeCount}>
           {item.variants?.length === 1
             ? "1 Size Available"
-            : `${item.variants.length} Sizes Available`}
+            : `${item.variants?.length || 0} Sizes Available`}
         </Text>
       </View>
       <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>

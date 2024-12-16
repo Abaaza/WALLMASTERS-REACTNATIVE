@@ -37,7 +37,7 @@ const HomeScreen = () => {
   const fetchProducts = async () => {
     try {
       const response = await fetch(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/products"
       );
       const data = await response.json();
       setProducts(data);

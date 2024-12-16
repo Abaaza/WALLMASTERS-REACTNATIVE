@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
+  ScrollView,
   Text,
   TextInput,
   Pressable,
   Alert,
   StyleSheet,
-  ScrollView,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { useNavigation } from "@react-navigation/native";
 
 const ChangePasswordScreen = () => {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [email, setEmail] = useState("");
+  const navigation = useNavigation();
 
   // Load email from AsyncStorage when the screen loads
   useEffect(() => {
@@ -38,9 +39,14 @@ const ChangePasswordScreen = () => {
       return;
     }
 
+    if (!email) {
+      Alert.alert("Error", "No email found. Please log in again.");
+      return;
+    }
+
     try {
       const response = await axios.post(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/change-password",
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/change-password",
         {
           email,
           oldPassword,
@@ -51,6 +57,8 @@ const ChangePasswordScreen = () => {
       Alert.alert("Success", response.data.message);
       setOldPassword(""); // Clear input fields
       setNewPassword("");
+      // Navigate to Profile after successful password change
+      navigation.navigate("Profile");
     } catch (error) {
       console.error("Password change failed:", error);
       if (error.response) {
@@ -92,7 +100,7 @@ export default ChangePasswordScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
     backgroundColor: "#fff",
   },

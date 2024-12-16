@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -14,53 +14,118 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import axios from "axios";
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const [userInfo, setUserInfo] = useState({ name: "", email: "" });
   const [loading, setLoading] = useState(true);
+  const didNavigate = useRef(false); // Prevent multiple navigations
 
   const menuOptions = [
     { id: "1", title: "Your Orders", screen: "Your Orders" },
-    { id: "4", title: "Saved Items", screen: "Saved Items" }, // Added "Saved Items" option
+    { id: "4", title: "Saved Items", screen: "Saved Items" },
     { id: "2", title: "Manage Addresses", screen: "Saved Addresses" },
     { id: "3", title: "Change Password", screen: "ChangePassword" },
     { id: "5", title: "Logout", action: "logout" },
   ];
 
   useEffect(() => {
-    const checkAuthStatus = async () => {
+    const verifyAndFetchUser = async () => {
       try {
         const token = await AsyncStorage.getItem("authToken");
-        if (token) {
-          const storedName = await AsyncStorage.getItem("userName");
-          const storedEmail = await AsyncStorage.getItem("userEmail");
-          setUserInfo({
-            name: storedName || "No name provided",
-            email: storedEmail || "No email provided",
-          });
-        } else {
-          navigation.replace("Login");
+        if (!token) {
+          // No token found, treat as session expired
+          handleSessionExpired();
+          return;
         }
+
+        // First verify the token
+        const verifyResponse = await axios.get(
+          "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/auth/verify-session",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (verifyResponse.status !== 200) {
+          // If verification fails, treat as session expired
+          handleSessionExpired();
+          return;
+        }
+
+        // If verification succeeds, now fetch user details
+        const userResponse = await axios.get(
+          "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/user/details",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        setUserInfo({
+          name: userResponse.data.name || "Guest",
+          email: userResponse.data.email || "guest@example.com",
+        });
       } catch (error) {
-        console.error("Error checking auth status:", error);
+        console.error("Error in verifyAndFetchUser:", error);
+
+        // If token verification or user fetch fails due to 401 or similar,
+        // treat as session expired
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          handleSessionExpired();
+        } else {
+          Alert.alert("Error", "Unable to fetch user data.");
+          // Optionally, you can handle other errors here differently
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    checkAuthStatus();
+    const handleSessionExpired = async () => {
+      if (didNavigate.current) return; // Prevent multiple navigations
+      didNavigate.current = true;
+
+      // Clear invalid token
+      await AsyncStorage.removeItem("authToken");
+      await AsyncStorage.removeItem("refreshToken");
+      await AsyncStorage.removeItem("userId");
+      Alert.alert("Session Expired", "Please log in again.");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    };
+
+    verifyAndFetchUser();
   }, [navigation]);
 
-  const handlePress = (screen, action) => {
+  const handlePress = async (screen, action) => {
     if (action === "logout") {
       Alert.alert("Logout Confirmation", "Are you sure you want to log out?", [
         { text: "Cancel", style: "cancel" },
         {
           text: "Logout",
           onPress: async () => {
-            await AsyncStorage.removeItem("authToken");
-            navigation.replace("Login");
+            try {
+              await AsyncStorage.multiRemove([
+                "authToken",
+                "userId",
+                "refreshToken",
+              ]);
+              setUserInfo({ name: "Guest", email: "guest@example.com" });
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "Login" }],
+              });
+            } catch (error) {
+              console.error("Error during logout:", error);
+              Alert.alert("Error", "Failed to log out. Please try again.");
+            }
           },
         },
       ]);
@@ -98,7 +163,6 @@ const ProfileScreen = () => {
         <View style={styles.logoContainer}></View>
         <Text style={styles.welcomeText}>Welcome, {userInfo.name}!</Text>
 
-        {/* Personal Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Info</Text>
           <View style={styles.option}>
@@ -109,7 +173,6 @@ const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Menu Options */}
         <FlatList
           data={menuOptions}
           renderItem={renderItem}

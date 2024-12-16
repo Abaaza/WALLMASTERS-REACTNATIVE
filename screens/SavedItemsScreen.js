@@ -23,26 +23,28 @@ const SavedItemsScreen = () => {
   const fetchProducts = async () => {
     try {
       const response = await axios.get(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/products"
       );
       setAllProducts(response.data);
     } catch (error) {
       Alert.alert("Error", "Failed to load products.");
-      console.error(error);
+      console.error("Error fetching products:", error);
     }
   };
 
-  // Load saved items for the user
   // Load saved items for the user
   const loadSavedItems = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       const token = await AsyncStorage.getItem("authToken");
-      console.log("User ID:", userId); // Verify userId
-      console.log("Token:", token); // Verify token
+
+      if (!userId || !token) {
+        Alert.alert("Error", "You are not logged in.");
+        return;
+      }
 
       const response = await axios.get(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/saved-items/${userId}`,
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/saved-items/${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -55,12 +57,14 @@ const SavedItemsScreen = () => {
         })
         .filter(Boolean); // Remove any null items
 
+      console.log("Enriched Saved Items:", enrichedItems); // Debugging
+
       setSavedItems(enrichedItems);
     } catch (error) {
       console.error("Error loading saved items:", error);
       Alert.alert("Error", "Failed to load saved items.");
     } finally {
-      setLoading(false); // Stop loading indicator here
+      setLoading(false); // Stop loading indicator
     }
   };
 
@@ -85,7 +89,11 @@ const SavedItemsScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <ProductCard item={item} onRemove={() => handleRemove(item.productId)} />
+    <ProductCard
+      item={item}
+      onRemove={() => handleRemove(item.productId)}
+      images={item.images} // Pass images to ProductCard
+    />
   );
 
   if (loading) {
@@ -124,7 +132,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     justifyContent: "center",
-    alignItems: "center", // Align items to the center of the screen
+    alignItems: "center",
     paddingBottom: 20,
   },
   loadingContainer: {

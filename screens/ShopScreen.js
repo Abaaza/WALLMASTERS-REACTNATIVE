@@ -1,14 +1,15 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  Image,
+  ScrollView,
 } from "react-native";
-import { Image } from "expo-image"; // Import from expo-image
+
 import ModalSelector from "react-native-modal-selector";
 import { useNavigation } from "@react-navigation/native";
 import ProductItemWM from "../components/ProductItemWM";
@@ -17,7 +18,6 @@ const ShopScreen = ({ route }) => {
   const navigation = useNavigation();
   const initialTheme = route?.params?.theme || "";
 
-  const scrollViewRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,13 +25,14 @@ const ShopScreen = ({ route }) => {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedTheme, setSelectedTheme] = useState(initialTheme);
   const [selectedThreePiece, setSelectedThreePiece] = useState(null);
+  const [imageError, setImageError] = useState({});
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         const response = await fetch(
-          "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+          "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/products"
         );
         const data = await response.json();
         setProducts(data);
@@ -101,15 +102,30 @@ const ShopScreen = ({ route }) => {
         })
       }
       renderImage={() => (
-        <Image
-          style={styles.productImage}
-          source={item.imageUrl}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
+        <View>
+          <Image
+            style={styles.productImage}
+            source={{ uri: item.imageUrl }} // Ensure this is a valid URI
+            contentFit="cover"
+            cachePolicy="disk"
+            onError={() =>
+              setImageError((prevErrors) => ({
+                ...prevErrors,
+                [item.id]: true,
+              }))
+            }
+          />
+          {imageError[item.id] && (
+            <Text style={styles.placeholderText}>Image not available</Text>
+          )}
+        </View>
       )}
     />
   );
+
+  const loadMoreProducts = () => {
+    setTimeout(() => setVisibleProducts((prev) => prev + 14), 100); // Small delay to ensure rendering
+  };
 
   if (loading) {
     return (
@@ -120,84 +136,89 @@ const ShopScreen = ({ route }) => {
   }
 
   return (
-    <ScrollView style={styles.container} ref={scrollViewRef}>
-      <View style={styles.logoContainer}>
-        <Image
-          style={styles.logo}
-          source={require("../assets/13.jpg")}
-          contentFit="cover"
-          cachePolicy="memory-disk"
+    <ScrollView>
+      <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            style={styles.logo}
+            source={require("../assets/13.jpg")}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        </View>
+
+        {/* Filter Selectors and Buttons */}
+        <View style={styles.headerContainer}>
+          <ModalSelector
+            data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
+            initValue="Select Theme"
+            onChange={(option) => setSelectedTheme(option.label)}
+            style={styles.modalSelector}
+            cancelText="Close"
+          >
+            <Text style={styles.selectorText}>
+              {selectedTheme || "Select Theme"}
+            </Text>
+          </ModalSelector>
+
+          <ModalSelector
+            data={uniqueColors.map((color) => ({ key: color, label: color }))}
+            initValue="Select Color"
+            onChange={(option) => setSelectedColor(option.label)}
+            style={styles.modalSelector}
+            cancelText="Close"
+          >
+            <Text style={styles.selectorText}>
+              {selectedColor || "Select Color"}
+            </Text>
+          </ModalSelector>
+
+          <ModalSelector
+            data={[
+              { key: "yes", label: "3 Pieces" },
+              { key: "no", label: "One Piece" },
+            ]}
+            initValue="Select Option"
+            onChange={(option) => setSelectedThreePiece(option.key)}
+            style={styles.modalSelector}
+            cancelText="Close"
+          >
+            <Text style={styles.selectorText}>
+              {selectedThreePiece === null
+                ? "Number of pieces"
+                : selectedThreePiece === "yes"
+                  ? "3 Pieces"
+                  : "One Piece"}
+            </Text>
+          </ModalSelector>
+
+          <TouchableOpacity
+            onPress={resetFilters}
+            style={styles.fullWidthButton}
+          >
+            <Text style={styles.buttonText}>Reset Filters</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Products List */}
+        <FlatList
+          data={filteredProducts.slice(0, visibleProducts)}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          contentContainerStyle={styles.listContent}
+          ListFooterComponent={
+            visibleProducts < filteredProducts.length ? (
+              <TouchableOpacity
+                onPress={loadMoreProducts}
+                style={styles.fullWidthButton2}
+              >
+                <Text style={styles.buttonText}>Load More</Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       </View>
-
-      {/* Filter Selectors and Buttons */}
-      <View style={styles.headerContainer}>
-        <ModalSelector
-          data={uniqueThemes.map((theme) => ({ key: theme, label: theme }))}
-          initValue="Select Theme"
-          onChange={(option) => setSelectedTheme(option.label)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>
-            {selectedTheme || "Select Theme"}
-          </Text>
-        </ModalSelector>
-
-        <ModalSelector
-          data={uniqueColors.map((color) => ({ key: color, label: color }))}
-          initValue="Select Color"
-          onChange={(option) => setSelectedColor(option.label)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>
-            {selectedColor || "Select Color"}
-          </Text>
-        </ModalSelector>
-
-        <ModalSelector
-          data={[
-            { key: "yes", label: "3 Pieces" },
-            { key: "no", label: "One Piece" },
-          ]}
-          initValue="Select Option"
-          onChange={(option) => setSelectedThreePiece(option.key)}
-          style={styles.modalSelector}
-          cancelText="Close"
-        >
-          <Text style={styles.selectorText}>
-            {selectedThreePiece === null
-              ? "Number of pieces"
-              : selectedThreePiece === "yes"
-              ? "3 Pieces"
-              : "One Piece"}
-          </Text>
-        </ModalSelector>
-
-        <TouchableOpacity onPress={resetFilters} style={styles.fullWidthButton}>
-          <Text style={styles.buttonText}>Reset Filters</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Products List */}
-      <FlatList
-        data={filteredProducts.slice(0, visibleProducts)}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
-        contentContainerStyle={styles.listContent}
-      />
-
-      {/* Load More Button */}
-      {visibleProducts < filteredProducts.length && (
-        <TouchableOpacity
-          onPress={() => setVisibleProducts((prev) => prev + 14)}
-          style={styles.fullWidthButton2} // Use fullWidthButton styling
-        >
-          <Text style={styles.buttonText}>Load More</Text>
-        </TouchableOpacity>
-      )}
     </ScrollView>
   );
 };
@@ -217,7 +238,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#DCDCDC",
     borderRadius: 8,
     padding: 10,
-    width: "100%", // Full-width for consistency
+    width: "100%",
   },
   selectorText: {
     fontSize: 16,
@@ -229,7 +250,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 5,
-    width: "100%", // Full-width
+    width: "100%",
     alignSelf: "center",
   },
   buttonText: {
@@ -263,13 +284,22 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
   },
+  placeholderText: {
+    position: "absolute",
+    top: "40%",
+    left: "10%",
+    right: "10%",
+    textAlign: "center",
+    color: "#888",
+    fontSize: 14,
+  },
   fullWidthButton2: {
     backgroundColor: "#ff6347",
     padding: 7,
     borderRadius: 8,
     alignItems: "center",
     marginVertical: 5,
-    width: "95%", // Full-width
+    width: 320,
     alignSelf: "center",
     marginBottom: 10,
   },

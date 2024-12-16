@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSelector } from "react-redux";
@@ -20,15 +21,21 @@ const ConfirmationScreen = () => {
   const cart = useSelector((state) => state.cart.cart);
   const userId = useSelector((state) => state.cart.userId);
 
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
   const subtotal =
     cart?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
   const shippingCost = subtotal > 2000 ? 0 : 70;
   const total = subtotal + shippingCost;
 
   const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return; // Prevent multiple presses if already placing order
+
+    setIsPlacingOrder(true);
+
     try {
       const orderData = {
-        userId: userId || "guest",
+        userId: userId || "guest", // Ensure backend can handle this
         products: cart.map((item) => ({
           productId: item.id,
           name: item.name,
@@ -39,19 +46,21 @@ const ConfirmationScreen = () => {
         })),
         totalPrice: total,
         shippingAddress: {
-          ...address, // Ensure address contains email
+          ...address,
           email: address.email || "N/A", // Include email from address
         },
       };
 
-      console.log("Sending Order:", orderData);
+      console.log("Sending Order:", orderData); // Log order data
 
       const response = await axios.post(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/orders",
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/orders",
         orderData
       );
+
       console.log("Order placed successfully:", response.data);
 
+      // Navigate to Order screen
       navigation.navigate("Order", {
         orderId: response.data.order.orderId,
         subtotal: subtotal,
@@ -59,8 +68,12 @@ const ConfirmationScreen = () => {
         total: total,
       });
     } catch (error) {
-      console.error("Order placement failed:", error);
+      console.error(
+        "Order placement failed:",
+        error.response ? error.response.data : error.message
+      );
       Alert.alert("Error", "Failed to place the order. Please try again.");
+      setIsPlacingOrder(false); // Reset to allow retry if needed
     }
   };
 
@@ -107,8 +120,16 @@ const ConfirmationScreen = () => {
       </View>
 
       {/* Place Order Button */}
-      <Pressable onPress={handlePlaceOrder} style={styles.orderButton}>
-        <Text style={styles.buttonText}>Place Order</Text>
+      <Pressable
+        onPress={handlePlaceOrder}
+        style={[styles.orderButton, isPlacingOrder && { opacity: 0.7 }]}
+        disabled={isPlacingOrder}
+      >
+        {isPlacingOrder ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Place Order</Text>
+        )}
       </Pressable>
     </ScrollView>
   );
@@ -192,7 +213,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 10,
     alignItems: "center",
-    marginBottom: 10,
     marginTop: 15,
     marginBottom: 30,
   },

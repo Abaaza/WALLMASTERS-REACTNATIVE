@@ -18,10 +18,17 @@ const SavedAddressesScreen = ({ navigation }) => {
       }
 
       const response = await axios.get(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/addresses/${userId}`
       );
 
-      const sortedAddresses = response.data.sort((a, b) =>
+      // Ensure one address is default if only one exists
+      const data = response.data;
+      if (data.length === 1 && !data[0].isDefault) {
+        await setDefaultAddressOnBackend(data[0]._id, userId);
+        data[0].isDefault = true;
+      }
+
+      const sortedAddresses = data.sort((a, b) =>
         a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
       );
       setAddresses(sortedAddresses);
@@ -34,39 +41,50 @@ const SavedAddressesScreen = ({ navigation }) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       await axios.delete(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}/${addressId}`
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/addresses/${userId}/${addressId}`
       );
 
-      setAddresses((prevAddresses) =>
-        prevAddresses
-          .filter((address) => address._id !== addressId)
-          .sort((a, b) =>
-            a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
-          )
+      let updatedAddresses = addresses.filter(
+        (address) => address._id !== addressId
       );
+
+      // Automatically set the only remaining address as default
+      if (updatedAddresses.length === 1 && !updatedAddresses[0].isDefault) {
+        await setDefaultAddressOnBackend(updatedAddresses[0]._id, userId);
+        updatedAddresses[0].isDefault = true;
+      }
+
+      updatedAddresses = updatedAddresses.sort((a, b) =>
+        a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+      );
+      setAddresses(updatedAddresses);
     } catch (error) {
       console.error("Error deleting address:", error);
     }
   };
 
+  const setDefaultAddressOnBackend = async (addressId, userId) => {
+    await axios.put(
+      `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/addresses/${userId}/default/${addressId}`
+    );
+  };
+
   const setDefaultAddress = async (addressId) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      await axios.put(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}/default/${addressId}`
-      );
+      await setDefaultAddressOnBackend(addressId, userId);
 
-      setAddresses((prevAddresses) =>
-        prevAddresses
-          .map((address) =>
-            address._id === addressId
-              ? { ...address, isDefault: true }
-              : { ...address, isDefault: false }
-          )
-          .sort((a, b) =>
-            a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
-          )
-      );
+      const updatedAddresses = addresses
+        .map((address) =>
+          address._id === addressId
+            ? { ...address, isDefault: true }
+            : { ...address, isDefault: false }
+        )
+        .sort((a, b) =>
+          a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+        );
+
+      setAddresses(updatedAddresses);
     } catch (error) {
       console.error("Error setting default address:", error);
     }

@@ -12,9 +12,16 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
 
-// Address validation schema (Simple validation)
+const isValidEmail = (email) => {
+  const regex = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+  return regex.test(email);
+};
+
 const validateAddress = (address) => {
-  return Object.values(address).every((field) => field !== "");
+  return Object.entries(address).every(([key, value]) => {
+    if (key === "postalCode") return true; // Allow postalCode to be optional
+    return value.trim() !== "";
+  });
 };
 
 const AddressScreen = () => {
@@ -27,149 +34,148 @@ const AddressScreen = () => {
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [isAddressLoaded, setIsAddressLoaded] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]); // All saved addresses
+  const [loadedAddress, setLoadedAddress] = useState(null); // Currently loaded address
 
-  const country = "Egypt"; // Non-editable country
-  const paymentMethod = "Cash on Delivery"; // Non-editable payment method
+  const country = "Egypt";
+  const paymentMethod = "Cash on Delivery";
 
   useEffect(() => {
-    loadUserData(); // Load user name and email if signed in
-    loadSavedAddress(); // Load saved address if available
+    loadUserData();
+    loadSavedAddresses();
   }, []);
 
-  // Load user name and email if the user is signed in
   const loadUserData = async () => {
-    try {
-      const userId = await AsyncStorage.getItem("userId");
-      if (!userId) {
-        console.warn("No user ID found in AsyncStorage");
-        return;
-      }
-      console.log("Retrieved user ID:", userId);
-
-      const userData = await axios.get(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/users/${userId}`
-      );
-
-      if (userData.data) {
-        setName(userData.data.name);
-        setEmail(userData.data.email);
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        console.warn("User not found on the server");
-      } else {
-        console.error("Error loading user data:", error);
-      }
-    }
-  };
-
-  // Load saved address if it exists for the user
-  const loadSavedAddress = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) return;
 
-      const response = await axios.get(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`
+      const { data } = await axios.get(
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/users/${userId}`
       );
 
-      if (response.data && response.data.length > 0) {
-        // Find the address with isDefault set to true
-        const defaultAddress = response.data.find(
-          (address) => address.isDefault
-        );
-
-        // If a default address is found, use it; otherwise, fall back to the first address
-        const address = defaultAddress || response.data[0];
-
-        setName(address.name || name);
-        setEmail(address.email || email);
-        setMobileNo(address.mobileNo);
-        setHouseNo(address.houseNo);
-        setStreet(address.street);
-        setCity(address.city);
-        setPostalCode(address.postalCode);
-        setIsAddressLoaded(true);
+      if (data) {
+        setName(data.name);
+        setEmail(data.email);
       }
     } catch (error) {
-      console.error("Error loading address:", error);
+      console.error("Error loading user data:", error);
     }
   };
 
-  const handleSaveAddress = async () => {
+  const loadSavedAddresses = async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
-      if (!userId) {
-        Alert.alert("Error", "User ID is missing.");
-        return;
-      }
+      if (!userId) return;
 
-      const address = {
-        name,
-        email,
-        mobileNo,
-        houseNo,
-        street,
-        city,
-        postalCode,
+      const { data } = await axios.get(
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/addresses/${userId}`
+      );
+
+      if (data && data.length > 0) {
+        const defaultAddress = data.find((address) => address.isDefault);
+        const address = defaultAddress || data[0];
+
+        // Set the form fields with the loaded address
+        setName(address.name || "");
+        setEmail(address.email || "");
+        setMobileNo(address.mobileNo || "");
+        setHouseNo(address.houseNo || "");
+        setStreet(address.street || "");
+        setCity(address.city || "");
+        setPostalCode(address.postalCode || "");
+
+        setSavedAddresses(data); // Store all addresses
+        setLoadedAddress(address); // Store the currently loaded address
+        setIsAddressLoaded(true);
+      } else {
+        console.log("No saved addresses found.");
+      }
+    } catch (error) {
+      console.error("Error loading saved addresses:", error);
+    }
+  };
+  const handleSaveAddress = async () => {
+    try {
+      // Create the new address object
+      const newAddress = {
+        name: name.trim(),
+        email: email.trim(),
+        mobileNo: mobileNo.trim(),
+        houseNo: houseNo.trim(),
+        street: street.trim(),
+        city: city.trim(),
         country,
+        ...(postalCode ? { postalCode: postalCode.trim() } : {}), // Include postalCode only if provided
       };
 
-      if (!validateAddress(address)) {
+      // Validate the address
+      if (!validateAddress(newAddress)) {
         Alert.alert("Error", "Please fill all the required fields.");
         return;
       }
 
-      console.log("Saving address:", address);
+      // Validate the email format
+      if (!isValidEmail(email)) {
+        Alert.alert("Error", "Please enter a valid email address.");
+        return;
+      }
 
-      try {
-        // Attempt to save the address
-        await axios.post(
-          `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/addresses/${userId}`,
-          { address }
-        );
-        console.log("Address saved successfully");
+      // Get the user ID from AsyncStorage
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        console.log("No user ID found, navigating directly.");
+        navigation.navigate("Order Summary", {
+          address: newAddress,
+          paymentMethod,
+        });
+        return;
+      }
 
-        // Refresh the saved address list after saving
-        await loadSavedAddress();
-      } catch (error) {
-        if (error.response && error.response.status === 409) {
-          // Handle duplicate address without showing an alert
-          console.log("Duplicate address detected, proceeding without saving.");
-        } else {
-          console.error("Error saving address:", error);
-          Alert.alert("Error", "Failed to save the address.");
+      // Send the address to the backend
+      const response = await axios.post(
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/addresses/${userId}`,
+        newAddress
+      );
+
+      // Handle successful response
+      if (response.status === 201) {
+        console.log("Address saved successfully.");
+
+        await loadSavedAddresses(); // Refresh saved addresses
+        setLoadedAddress(newAddress); // Update the loaded address
+        navigation.navigate("Order Summary", {
+          address: newAddress,
+          paymentMethod,
+        });
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        // Handle duplicate address case based on backend response
+        if (error.response?.status === 409) {
+          console.log("Duplicate address detected:", error.response.data);
+
+          navigation.navigate("Order Summary", {
+            address: {
+              name,
+              email,
+              mobileNo,
+              houseNo,
+              street,
+              city,
+              country,
+              postalCode, // Explicitly include all fields
+            },
+            paymentMethod,
+          });
           return;
         }
       }
 
-      // Navigate to Order Summary screen after saving or if duplicate
-      navigation.navigate("Order Summary", { address, paymentMethod });
-    } catch (error) {
-      console.error("Error:", error);
-      Alert.alert("Error", "Failed to complete the action.");
+      // Handle other errors
+      console.error("Error saving address:", error);
+      Alert.alert("Error", "Failed to save the address. Please try again.");
     }
-  };
-
-  const handleProceedToConfirm = () => {
-    const address = {
-      name,
-      email,
-      mobileNo,
-      houseNo,
-      street,
-      city,
-      postalCode,
-      country,
-      isDefault: false, // Default to false unless specified otherwise
-    };
-
-    if (!validateAddress(address)) {
-      Alert.alert("Error", "Please fill all the required fields.");
-      return;
-    }
-
-    handleSaveAddress(); // Save the address (whether new or edited)
   };
 
   return (
@@ -215,12 +221,10 @@ const AddressScreen = () => {
       <TextInput
         value={postalCode}
         onChangeText={setPostalCode}
-        placeholder="Postal Code"
+        placeholder="Postal Code (optional)"
         keyboardType="numeric"
         style={styles.input}
       />
-
-      {/* Non-editable fields styled like inputs */}
       <Text style={styles.text}>Country:</Text>
       <TextInput
         value={country}
@@ -235,17 +239,16 @@ const AddressScreen = () => {
         placeholder="Payment Method"
         style={styles.input}
       />
-      <Text style={styles.text}>Shipping Time: </Text>
+      <Text style={styles.text}>Shipping Time:</Text>
       <TextInput
         value="6 Business Days"
         editable={false}
         placeholder="Shipping Duration"
         style={styles.input}
       />
-
-      <Pressable onPress={handleProceedToConfirm} style={styles.proceedButton}>
+      <Pressable onPress={handleSaveAddress} style={styles.proceedButton}>
         <Text style={styles.buttonText}>
-          {isAddressLoaded ? "Proceed to Checkout" : "Save and Proceed"}
+          {isAddressLoaded ? "Proceed to Checkout" : "Proceed to Checkout"}
         </Text>
       </Pressable>
     </ScrollView>

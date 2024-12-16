@@ -12,35 +12,27 @@ import {
 } from "react-native";
 import { Ionicons, AntDesign, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDispatch } from "react-redux";
+import { setUser } from "../redux/CartReducer";
 
 const RegisterScreen = () => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
+  const dispatch = useDispatch();
 
-  // Helper function to validate email
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
   const handleRegister = async () => {
-    console.log("Register button clicked");
-    console.log("Name:", name);
-    console.log("Email:", email);
-
-    if (!name || !email || !password) {
-      Alert.alert("Input Error", "Please fill all fields.");
-      return;
-    }
-
-    console.log("Sending registration request...");
-
     try {
+      if (!name || !email || !password) {
+        Alert.alert("Validation Error", "Please fill all fields.");
+        return;
+      }
+
       const response = await axios.post(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/register",
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/register",
         {
           name,
           email,
@@ -48,25 +40,27 @@ const RegisterScreen = () => {
         }
       );
 
-      console.log("Response from server:", response.data);
+      if (response.status === 201) {
+        const { token, refreshToken, user } = response.data;
 
-      const { token, user } = response.data;
+        if (!token || !refreshToken || !user?._id) {
+          throw new Error(
+            "Missing token, refreshToken, or userId in registration response."
+          );
+        }
 
-      if (!token) {
-        console.log("No token received in the response.");
-        throw new Error("Token is missing from the response");
+        // Store tokens, userId, and userEmail after registration
+        await AsyncStorage.setItem("authToken", token);
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+        await AsyncStorage.setItem("userId", user._id);
+        await AsyncStorage.setItem("userEmail", user.email); // Store user email
+        dispatch(setUser(user._id));
+
+        // Navigate directly to Profile after registration
+        navigation.replace("Profile");
       }
-
-      await AsyncStorage.setItem("authToken", token);
-      await AsyncStorage.setItem("userName", user.name);
-
-      Alert.alert(
-        "Registration Successful",
-        "You have registered successfully"
-      );
-      navigation.replace("Profile");
     } catch (error) {
-      console.error("Registration failed", error);
+      console.error("Registration failed:", error);
 
       if (error.response) {
         Alert.alert("Registration Error", error.response.data.message);
@@ -147,7 +141,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
   },
-
   title: {
     fontSize: 18,
     fontWeight: "bold",
@@ -187,14 +180,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   logoContainer: {
-    width: "100%", // Full width of the container
-    alignItems: "center", // Centering the image
+    width: "100%",
+    alignItems: "center",
     flex: 1,
     marginBottom: 50,
   },
   logo: {
-    width: "100%", // Image takes 100% width
-    height: undefined, // Allow height to adjust automatically
+    width: "100%",
+    height: undefined,
     aspectRatio: 10,
   },
   signUpButton: {

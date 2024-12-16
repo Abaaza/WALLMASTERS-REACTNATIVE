@@ -27,7 +27,7 @@ const ProductInfoScreen = () => {
   const fetchProducts = async () => {
     try {
       const response = await fetch(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/products"
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/products"
       );
       const data = await response.json();
       setProducts(data);
@@ -98,7 +98,7 @@ const ProductInfoScreen = () => {
       }
 
       const response = await axios.get(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/saved-items/${userId}`,
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/saved-items/${userId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -131,13 +131,13 @@ const ProductInfoScreen = () => {
         name: item.name,
         size: selectedVariant.size || "N/A",
         price: selectedVariant.price || 0,
-        image: item.images?.[0] || "",
+        images: item.carouselImages || item.images || [], // Include all images
       };
 
       console.log("Saving product:", productToSave); // Debugging
 
       const response = await axios.post(
-        `https://wallmasters-backend-2a28e4a6d156.herokuapp.com/save-for-later/${userId}`,
+        `https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/save-for-later/${userId}`,
         { product: productToSave },
         {
           headers: {

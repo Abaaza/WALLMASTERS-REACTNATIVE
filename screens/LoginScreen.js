@@ -32,20 +32,55 @@ const LoginScreen = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const token = await AsyncStorage.getItem("authToken");
-        const userId = await AsyncStorage.getItem("userId");
+    const checkSession = async () => {
+      const token = await AsyncStorage.getItem("authToken");
+      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      const userId = await AsyncStorage.getItem("userId");
 
-        if (token && userId) {
+      if (token && userId && refreshToken) {
+        try {
+          // Verify token
+          await axios.get(
+            "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/auth/verify-session",
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          // If successful, navigate to profile
           dispatch(setUser(userId));
           navigation.replace("Profile");
+        } catch (error) {
+          // If verification fails, attempt to refresh token
+          try {
+            const refreshResponse = await axios.post(
+              "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/refresh-token",
+              {
+                refreshToken: refreshToken,
+              }
+            );
+            const {
+              token: newAccessToken,
+              refreshToken: newRefreshToken,
+              user,
+            } = refreshResponse.data;
+            await AsyncStorage.setItem("authToken", newAccessToken);
+            await AsyncStorage.setItem("refreshToken", newRefreshToken);
+            await AsyncStorage.setItem("userId", user._id);
+            await AsyncStorage.setItem("userEmail", user.email); // Store user email
+            dispatch(setUser(user._id));
+            navigation.replace("Profile");
+          } catch (refreshError) {
+            // If refresh fails, user must log in again
+            console.error("Refresh failed:", refreshError);
+            navigation.navigate("Login");
+          }
         }
-      } catch (error) {
-        console.error("Error checking login status:", error);
+      } else {
+        navigation.navigate("Login");
       }
     };
-    checkLoginStatus();
+
+    checkSession();
   }, [dispatch, navigation]);
 
   const handleLogin = async () => {
@@ -58,25 +93,28 @@ const LoginScreen = () => {
 
     try {
       const response = await axios.post(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/login",
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/login",
         {
           email,
           password,
         }
       );
 
-      const { token, user } = response.data;
+      const { token, user, refreshToken } = response.data; // Extract refreshToken as well
       const userId = user?._id;
 
-      if (!token || !userId) {
-        throw new Error("Invalid login response. Missing token or userId.");
+      if (!token || !userId || !refreshToken) {
+        throw new Error(
+          "Invalid login response. Missing token, userId, or refreshToken."
+        );
       }
 
       await AsyncStorage.setItem("authToken", token);
+      await AsyncStorage.setItem("refreshToken", refreshToken);
       await AsyncStorage.setItem("userId", userId);
+      await AsyncStorage.setItem("userEmail", user.email); // Store user email
 
       dispatch(setUser(userId));
-
       navigation.replace("Profile");
     } catch (error) {
       console.error("Login failed:", error);
@@ -101,7 +139,7 @@ const LoginScreen = () => {
 
     try {
       const response = await axios.post(
-        "https://wallmasters-backend-2a28e4a6d156.herokuapp.com/request-password-reset",
+        "https://nhts6foy5k.execute-api.me-south-1.amazonaws.com/dev/request-password-reset",
         {
           email: forgotPasswordEmail,
         }
